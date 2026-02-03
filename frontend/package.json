@@ -1,0 +1,10 @@
+{
+  "name": "frontend",
+  "private": true,
+  "devDependencies": {
+    "serve": "^14.2.4"
+  },
+  "scripts": {
+    "start": "serve . -l 3000"
+  }
+}
