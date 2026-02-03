@@ -4,7 +4,7 @@
  * - Usuário escreve uma frase e valida (gramática/estilo) usando LanguageTool
  */
 
-const DEFAULT_API_URL = "https://fiap-bff-9aojr.onrender.com/ask";// público
+const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask";// público
 const LANGUAGETOOL_URL = "https://api.languagetool.org/v2/check"; // público
 
 // Elements
