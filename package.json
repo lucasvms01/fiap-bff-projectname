@@ -1,20 +1,11 @@
 {
-  "name": "bff-node-app",
+  "name": "fiap-monorepo",
+  "private": true,
   "version": "1.0.0",
-  "description": "A BFF (Backend for Frontend) application built with Node.js and Express.",
-  "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm --prefix backend start\" \"npm --prefix frontend run start\" \"powershell -NoProfile -Command Start-Process http://localhost:3000\""
   },
-  "dependencies": {
-    "axios": "^1.9.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "^4.17.1",
-    "express-rate-limit": "^7.5.0",
-    "newrelic": "^12.20.0"
-  },
-  "author": "",
-  "license": "ISC"
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
 }
