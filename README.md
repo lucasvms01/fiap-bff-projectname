@@ -226,3 +226,8 @@ As métricas demonstram que a aplicação está dentro dos parâmetros aceitáve
 ## 13. Conclusão
 
 O projeto demonstra a implementação completa de uma arquitetura **Front-end + BFF**, com deploy em ambiente cloud, integração com IA, validação gramatical e monitoramento da aplicação, atendendo integralmente aos requisitos propostos na disciplina de Front-end Engineering.
+
+---
+## Para acessar o site :
+
+https://fiap-front-v2.onrender.com
