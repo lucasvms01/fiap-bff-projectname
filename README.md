@@ -149,8 +149,10 @@ npm start
 
 A API ficará disponível em:
 
-```
-http://localhost:3000
+http://localhost:3001
+
+> Obs: A porta pode variar caso a variável de ambiente `PORT` seja alterada no arquivo `.env`.
+
 ```
 
 ---
