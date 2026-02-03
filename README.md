@@ -14,121 +14,132 @@
 
 ## 2. Sobre o Projeto
 
-Este projeto foi desenvolvido para a disciplina de **Front-end Engineering**, com o objetivo de construir uma aplicação web que consome um **BFF (Backend for Frontend) próprio**, implementado em Node.js.
+Este projeto foi desenvolvido para a disciplina de **Front-end Engineering** com o objetivo de construir uma aplicação web que consome um **BFF (Backend for Frontend) próprio**, implementado em Node.js.
 
 A aplicação permite que o usuário:
 
-- Gere palavras em inglês dinamicamente  
+- Gere palavras em inglês dinamicamente via IA  
 - Visualize descrição e casos de uso  
-- Escreva frases utilizando as palavras  
+- Escreva frases utilizando essas palavras  
 - Receba validação gramatical automática  
 
-O sistema foi estruturado com separação clara entre Front-end e Back-end, atendendo aos requisitos propostos na disciplina.
+O sistema foi estruturado com separação clara entre Front-end e Back-end, seguindo boas práticas de arquitetura.
 
 ---
 
-## 3. Objetivos do Projeto
-
-- Construir um Front-end funcional e responsivo  
-- Criar um BFF próprio em Node.js  
-- Integrar o BFF com um provedor de IA  
-- Exibir palavras, descrições e casos de uso  
-- Permitir validação de frases  
-- Realizar deploy do Front-end  
-- Realizar deploy da API própria  
-- Documentar métricas de performance (Web Vitals)  
-- Entregar documentação estruturada via README  
-
----
-
-## 4. Arquitetura
+## 3. Arquitetura
 
 O projeto está dividido em duas camadas principais:
 
-- **Frontend** → Aplicação Web  
-- **Backend** → API BFF (Node.js + Express)  
+- **Frontend** → Aplicação Web (HTML + Tailwind + JS)
+- **Backend (BFF)** → API própria em Node.js + Express
 
-### 4.1 Fluxo da Aplicação
+### Fluxo da Aplicação
 
-1. O usuário acessa a aplicação web  
-2. O Front-end realiza requisição para o endpoint `/ask`  
-3. O BFF consulta um modelo de IA (Groq – compatível com OpenAI)  
-4. O BFF retorna um array estruturado contendo:
+1. O usuário acessa o Front-end
+2. O Front realiza requisição para `/ask`
+3. O BFF consulta um modelo de IA (Groq API)
+4. O BFF retorna um array com:
    - `word`
    - `description`
    - `useCase`
-5. O Front-end renderiza os dados  
-6. O usuário escreve uma frase  
-7. A frase é validada via serviço de correção gramatical  
+5. O Front renderiza os dados
+6. O usuário escreve uma frase
+7. A frase é validada via LanguageTool API
 
 ---
 
-## 5. Tecnologias Utilizadas
+## 4. Tecnologias Utilizadas
 
-### 5.1 Front-end
-
+### Front-end
 - HTML5  
-- TailwindCSS (via CDN)  
-- JavaScript (Vanilla JS)  
+- TailwindCSS  
+- JavaScript (Vanilla)  
 - Fetch API  
 - LanguageTool API  
 
-### 5.2 Back-end (BFF)
-
+### Back-end (BFF)
 - Node.js  
 - Express  
 - Axios  
-- Integração com Groq API  
-- New Relic (monitoramento)  
+- Groq API  
+- Express-rate-limit  
+- CORS  
+- New Relic  
 - Deploy via Render  
 
 ---
 
-## 6. Estrutura do Projeto
+## 5. Estrutura do Projeto
 
 ```
 fiap-bff-projectname/
 │
 ├── backend/
-│   ├── src/
-│   │   └── app.js
-│   ├── package.json
-│   ├── newrelic.js
-│   └── .env
+│   ├── routes/
+│   ├── app.js
+│   └── package.json
 │
 ├── frontend/
 │   ├── index.html
 │   └── app.js
 │
-├── package.json
+├── docs/
+│   └── images/
+│       ├── lighthouse-performance.png
+│       ├── lighthouse-accessibility.png
+│       └── ...
+│
 └── README.md
 ```
 
 ---
 
-## 7. Deploy
+## 6. Deploy
 
-### 7.1 API (BFF)
+### API (BFF)
 
 Deploy realizado no Render.
 
 **URL da API:**  
-https://fiap-bff-v2.onrender.com  
+https://fiap-bff-v2.onrender.com
 
 **Endpoint principal:**  
-https://fiap-bff-v2.onrender.com/ask  
+https://fiap-bff-v2.onrender.com/ask
 
 ---
 
-### 7.2 Front-end
+### Front-end
 
-O Front-end pode ser executado localmente ou publicado como **Static Site no Render**.
+Deploy realizado como **Static Site no Render**.
+
+**URL do site:**  
+https://fiap-front-v2.onrender.com
 
 ---
 
-## 8. Execução Local
+### Como realizar o Deploy no Render
 
-### 8.1 Executar o Back-end
+#### Backend (Web Service)
+
+1. New → Web Service
+2. Root Directory: `backend`
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+5. Definir variáveis de ambiente (ex: GROQ_API_KEY)
+
+#### Front-end (Static Site)
+
+1. New → Static Site
+2. Root Directory: `frontend`
+3. Build Command: (vazio)
+4. Publish Directory: `.`
+
+---
+
+## 7. Execução Local
+
+### Back-end
 
 ```bash
 cd backend
@@ -139,95 +150,111 @@ npm start
 A API ficará disponível em:
 
 ```
-http://localhost:3001
+http://localhost:3000
 ```
 
 ---
 
-### 8.2 Executar o Front-end
+### Front-end
 
 ```bash
 cd frontend
 npx serve .
 ```
 
-Ou utilizar a extensão **Live Server** do VS Code.
+Ou utilizar Live Server no VS Code.
 
-A aplicação poderá ser acessada em:
+## Links do Projeto (Produção)
 
-```
-http://localhost:3000
-```
+- **Repositório (GitHub):** https://github.com/lucasvms01/fiap-bff-projectname  
+- **Site (Front-end em Cloud):** https://fiap-front-v2.onrender.com  
+- **API (BFF em Cloud):** https://fiap-bff-v2.onrender.com  
+- **Endpoint principal:** https://fiap-bff-v2.onrender.com/ask  
+
 
 ---
 
-## 9. Funcionalidades Implementadas
+## 8. Funcionalidades Implementadas
 
 - Geração dinâmica de palavras via IA  
-- Exibição de descrição  
-- Exibição de casos de uso  
+- Exibição de descrição e casos de uso  
 - Campo para escrita de frase  
 - Validação gramatical automática  
 - Sugestões de melhoria  
 - Filtro de palavras  
-- Integração com API própria  
+- Rate limit na API  
 - Monitoramento com New Relic  
 - Separação clara entre Front-end e BFF  
 
 ---
 
-## 10. Segurança e Boas Práticas
+## 9. Segurança e Boas Práticas
 
-- Uso de variáveis de ambiente (`.env`)  
-- Arquivo `.env` não versionado  
-- `node_modules` ignorado via `.gitignore`  
-- Rate limit implementado no back-end  
-- Monitoramento ativo da API  
-- Organização modular do código  
+- Uso de variáveis de ambiente (.env)
+- Arquivo .env não versionado
+- node_modules ignorado via .gitignore
+- Rate limit implementado
+- CORS configurado
+- Organização modular do código
+- Uso de trust proxy para ambiente cloud
 
 ---
 
-## 11. Métricas de Performance (Web Vitals)
+## 10. Métricas de Performance (Web Vitals)
 
-A aplicação foi analisada utilizando **Lighthouse** para avaliação de:
+A aplicação foi analisada utilizando o **Lighthouse** no ambiente de produção (Render).
 
-- LCP (Largest Contentful Paint)  
-- FID (First Input Delay)  
-- CLS (Cumulative Layout Shift)  
-- Performance Score  
+### Métricas avaliadas
 
-As métricas demonstram que a aplicação está dentro dos parâmetros aceitáveis de performance e estabilidade visual.
+- **LCP (Largest Contentful Paint):** mede o tempo necessário para o maior elemento visível da página ser carregado.
+- **FID (First Input Delay):** mede o tempo de resposta da aplicação à primeira interação do usuário.
+- **CLS (Cumulative Layout Shift):** mede a estabilidade visual da interface (evita “saltos” inesperados).
+- **Performance Score:** nota geral baseada nas métricas principais.
 
+As métricas obtidas demonstram que a aplicação está dentro dos parâmetros aceitáveis de performance e estabilidade visual.
+
+### Relatórios Lighthouse
+
+#### 1. Performance
 ![alt text](docs/images/image.png)
+
+#### 2. Accessibility
 ![alt text](docs/images/image-1.png)
+
+#### 3. Best Practices
 ![alt text](docs/images/image-2.png)
+
+#### 4. SEO
 ![alt text](docs/images/image-3.png)
+
+#### 5. Diagnósticos Complementares
 ![alt text](docs/images/image-4.png)
 ![alt text](docs/images/image-5.png)
 ![alt text](docs/images/image-6.png)
 ![alt text](docs/images/image-7.png)
 
----
-
-## 12. Critérios da Tarefa Atendidos
-
-- Repositório público  
-- Deploy do Front-end  
-- Deploy da API própria  
-- README estruturado  
-- Integração com BFF próprio  
-- Uso de IA  
-- Validação de frase  
-- Monitoramento da aplicação  
-- Documentação das métricas Web Vitals  
 
 ---
 
-## 13. Conclusão
+## 11. Critérios da Tarefa Atendidos
 
-O projeto demonstra a implementação completa de uma arquitetura **Front-end + BFF**, com deploy em ambiente cloud, integração com IA, validação gramatical e monitoramento da aplicação, atendendo integralmente aos requisitos propostos na disciplina de Front-end Engineering.
+- Repositório público
+- Deploy do Front-end em cloud
+- Deploy da API própria
+- Integração com IA
+- Validação gramatical
+- README estruturado
+- Monitoramento
+- Documentação das métricas Web Vitals
 
 ---
-## Para acessar o site :
+
+## 12. Conclusão
+
+O projeto demonstra a implementação completa de uma arquitetura Front-end + BFF com deploy em ambiente cloud, integração com IA, validação gramatical automática e monitoramento da aplicação, atendendo integralmente aos requisitos propostos na disciplina de Front-end Engineering.
+
+---
+
+## Acesso ao site (Cloud)
 
 https://fiap-front-v2.onrender.com
