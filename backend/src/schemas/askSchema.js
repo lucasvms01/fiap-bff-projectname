@@ -2,7 +2,7 @@ const Joi = require("joi");
 
 const askSchema = Joi.object({
   level: Joi.string()
-    .valid("easy", "medium", "hard")
+    .valid("easy", "medium", "hard", "veryhard")
     .default("medium"),
 
   count: Joi.number()
@@ -11,7 +11,7 @@ const askSchema = Joi.object({
     .max(80)
     .default(40),
 
-  seed: Joi.string().optional()
+  seed: Joi.string().optional(),
 });
 
 module.exports = askSchema;

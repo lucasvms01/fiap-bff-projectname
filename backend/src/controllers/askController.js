@@ -12,15 +12,32 @@ function daySeed() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/**
+ * ✅ Ajuste mínimo:
+ * - Antes checava pt_definition/pt_use_case/en_example (formato antigo)
+ * - Agora aceita o formato atual do app: description/useCaseEn
+ * - Mantém compatibilidade com o antigo (se algum provider devolver assim)
+ */
 function isCompleteItem(it) {
-  return (
-    it &&
-    it.word &&
-    it.type &&
+  if (!it) return false;
+
+  const hasBase = !!it.word && !!it.type;
+
+  const hasCurrent =
+    typeof it.description === "string" &&
+    it.description.trim().length > 0 &&
+    typeof it.useCaseEn === "string" &&
+    it.useCaseEn.trim().length > 0;
+
+  const hasLegacy =
     typeof it.pt_definition === "string" &&
+    it.pt_definition.trim().length > 0 &&
     typeof it.pt_use_case === "string" &&
-    typeof it.en_example === "string"
-  );
+    it.pt_use_case.trim().length > 0 &&
+    typeof it.en_example === "string" &&
+    it.en_example.trim().length > 0;
+
+  return hasBase && (hasCurrent || hasLegacy);
 }
 
 async function getAsk(req, res, next) {
