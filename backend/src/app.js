@@ -4,6 +4,7 @@ require("newrelic");
 const express = require("express");
 const rateLimit = require("express-rate-limit");
 const cors = require("cors");
+const validateRoute = require("./routes/validate");
 
 const askRoute = require("./routes/ask");
 
@@ -34,6 +35,7 @@ app.use(
 
 // Rotas
 app.use("/ask", askRoute);
+app.use("/validate", validateRoute);
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
 
