@@ -3,49 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>English Vocab Helper</title>
+    <title>WordWise</title>
 
-    <!-- Tailwind (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <meta
-      name="description"
-      content="Estude vocabulário em inglês com descrição, casos de uso e validação de frases."
-    />
+    <style>
+      :root { color-scheme: dark; }
+      .scrollbar::-webkit-scrollbar { width: 10px; }
+      .scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.25); border-radius: 999px; }
+      .scrollbar::-webkit-scrollbar-track { background: transparent; }
+    </style>
   </head>
 
   <body class="min-h-screen bg-slate-950 text-slate-100">
-    <!-- Top Bar -->
-    <header class="border-b border-white/10 bg-slate-950/70 backdrop-blur">
+    <!-- Header -->
+    <header class="border-b border-white/10 bg-gradient-to-r from-slate-950/85 via-slate-950/65 to-slate-950/85 backdrop-blur">
       <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
         <div class="flex items-center gap-3">
-          <div
-            class="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-500/15 ring-1 ring-indigo-400/30"
-          >
-            <span class="text-xl">📘</span>
+          <div class="grid h-11 w-11 place-items-center rounded-2xl ring-1 ring-white/10 bg-white/5">
+            <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
+              <defs>
+                <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#38bdf8"/>
+                  <stop offset="0.55" stop-color="#818cf8"/>
+                  <stop offset="1" stop-color="#22c55e"/>
+                </linearGradient>
+              </defs>
+              <path d="M16 14c0-4 3-7 7-7h22c4 0 7 3 7 7v30c0 4-3 7-7 7H30L19 60c-2 1-5 0-5-3V14z" fill="url(#g1)" opacity="0.9"/>
+              <path d="M23 20h18a2 2 0 0 1 0 4H23a2 2 0 0 1 0-4zm0 10h12a2 2 0 0 1 0 4H23a2 2 0 0 1 0-4z" fill="rgba(2,6,23,.85)"/>
+              <path d="M47 19l2.2 4.6 5 .7-3.7 3.6.9 5.1-4.4-2.3-4.4 2.3.9-5.1-3.7-3.6 5-.7L47 19z" fill="rgba(255,255,255,.95)"/>
+            </svg>
           </div>
+
           <div>
-            <h1 class="text-lg font-semibold leading-tight">English Vocab Helper</h1>
-            <p class="text-sm text-slate-300">
-              Palavras, descrição, casos de uso e validação de frases
-            </p>
+            <h1 class="text-lg font-semibold leading-tight">WordWise</h1>
+            <p class="text-sm text-slate-300">Aprenda jogando: uma palavra por vez, do jeito certo.</p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <a
-            id="endpointLink"
-            href="#"
-            target="_blank"
-            rel="noreferrer"
-            class="hidden rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10 sm:inline"
-          >
-            Ver endpoint
-          </a>
           <button
             id="btnSettings"
             class="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
-            title="Configurar endpoint"
+            title="Configurações"
           >
             ⚙️
           </button>
@@ -53,236 +53,170 @@
       </div>
     </header>
 
-    <!-- Main -->
     <main class="mx-auto max-w-6xl px-4 py-8">
-      <section class="grid gap-4 lg:grid-cols-12">
-        <!-- Left: Flow -->
-        <div class="lg:col-span-7">
-          <!-- Step 1 -->
-          <div class="rounded-3xl bg-white/5 p-6 ring-1 ring-white/10">
-            <div class="flex items-start justify-between gap-4">
+      <section class="grid gap-6 lg:grid-cols-3">
+        <!-- Left -->
+        <div class="rounded-3xl bg-white/5 p-5 ring-1 ring-white/10 lg:col-span-1">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-base font-semibold">Game de palavras</h2>
+
+            <div class="flex items-center gap-2">
+              <button
+                id="btnStartGame"
+                class="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400"
+              >
+                Começar
+              </button>
+
+              <button
+                id="btnNextWord"
+                class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                disabled
+              >
+                Próxima
+              </button>
+
+              <button
+                id="btnClear"
+                class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Dificuldade -->
+          <div class="mt-4 grid gap-2">
+            <label class="text-xs text-slate-400" for="difficultySelect">Dificuldade</label>
+            <select
+              id="difficultySelect"
+              class="w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              <option value="easy">Fácil</option>
+              <option value="medium" selected>Médio</option>
+              <option value="hard">Difícil</option>
+              <option value="veryhard">Muito difícil</option>
+            </select>
+            <p class="text-xs text-slate-500">
+              A dificuldade influencia quais palavras entram na rodada.
+            </p>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span id="gameCounter" class="rounded-2xl bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">
+              0 / 5
+            </span>
+
+            <span id="statusBadge" class="hidden rounded-2xl bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">
+              ...
+            </span>
+          </div>
+
+          <div class="mt-4 rounded-3xl bg-slate-900/40 p-5 ring-1 ring-white/10">
+            <p class="text-xs font-semibold text-slate-300">Palavra atual</p>
+            <div class="mt-2 flex items-center justify-between gap-3">
+              <h3 id="currentWord" class="text-2xl font-semibold tracking-tight text-slate-100">—</h3>
+              <span id="currentType" class="rounded-xl bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">—</span>
+            </div>
+            <p id="currentHint" class="mt-2 text-sm text-slate-300">
+              Clique em <b>Começar</b> para iniciar uma rodada de 5 palavras.
+            </p>
+          </div>
+
+          <div class="mt-4">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold text-slate-200">Já saiu</p>
+              <p class="text-xs text-slate-400">rodada atual</p>
+            </div>
+            <ul id="wordList" class="scrollbar mt-2 max-h-[360px] overflow-auto pr-1"></ul>
+          </div>
+        </div>
+
+        <!-- Right -->
+        <div class="rounded-3xl bg-white/5 p-5 ring-1 ring-white/10 lg:col-span-2">
+          <div>
+            <h2 class="text-base font-semibold">Detalhes</h2>
+            <p class="mt-1 text-sm text-slate-300">
+              Descrição + exemplo em português, e o validador com modo automático inteligente.
+            </p>
+          </div>
+
+          <div id="details" class="mt-5 grid gap-4">
+            <div class="rounded-2xl bg-slate-900/40 p-4 ring-1 ring-white/10">
+              <p class="text-sm text-slate-300">Nenhuma palavra ainda. Comece o game 🙂</p>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-3xl bg-slate-900/40 p-5 ring-1 ring-white/10">
+            <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div class="text-xs text-slate-400">Passo 1</div>
-                <h2 class="text-xl font-semibold">Gerar palavras</h2>
+                <h3 class="text-base font-semibold">Validador de frase</h3>
                 <p class="mt-1 text-sm text-slate-300">
-                  Busque um conjunto de palavras do BFF. Depois, selecione uma palavra e escreva
-                  uma frase usando ela.
+                  Ele só valida quando você <b>para de digitar</b> (mais profissional).
                 </p>
               </div>
 
               <div class="flex items-center gap-2">
+                <label class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10">
+                  <input id="autoValidateToggle" type="checkbox" class="h-4 w-4 accent-sky-400" />
+                  Automático
+                </label>
+
                 <button
-                  id="btnFetch"
-                  class="rounded-2xl bg-indigo-500 px-4 py-3 font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  id="btnValidate"
+                  class="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400"
                 >
-                  Gerar palavras
-                </button>
-                <button
-                  id="btnClear"
-                  class="rounded-2xl bg-white/5 px-4 py-3 font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
-                >
-                  Limpar
+                  Validar
                 </button>
               </div>
-            </div>
-
-            <div class="mt-4 grid gap-3 md:grid-cols-2">
-              <div>
-                <label class="block text-xs text-slate-400" for="filterInput">Filtrar por palavra</label>
-                <input
-                  id="filterInput"
-                  type="text"
-                  placeholder="ex: improve"
-                  class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs text-slate-400" for="wordSelect">Palavra selecionada</label>
-                <select
-                  id="wordSelect"
-                  class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">— gere as palavras —</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-              <span class="rounded-full bg-white/5 px-3 py-1 ring-1 ring-white/10">HTML + JS</span>
-              <span class="rounded-full bg-white/5 px-3 py-1 ring-1 ring-white/10">Tailwind CDN</span>
-              <span class="rounded-full bg-white/5 px-3 py-1 ring-1 ring-white/10">Validação via LanguageTool</span>
-              <span class="rounded-full bg-white/5 px-3 py-1 ring-1 ring-white/10">Atalho: Ctrl+Enter valida</span>
-            </div>
-          </div>
-
-          <!-- Step 2: Word Details -->
-          <div class="mt-4 rounded-3xl bg-white/5 p-6 ring-1 ring-white/10">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <div class="text-xs text-slate-400">Passo 2</div>
-                <h3 class="text-lg font-semibold">Descrição e casos de uso</h3>
-                <p class="mt-1 text-sm text-slate-300">
-                  Aqui você vê a explicação e exemplos de uso para a palavra selecionada.
-                </p>
-              </div>
-
-              <button
-                id="btnCopyWord"
-                class="rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled
-                title="Copiar palavra"
-              >
-                Copiar palavra
-              </button>
-            </div>
-
-            <div id="wordMeta" class="mt-4 grid gap-3 md:grid-cols-2">
-              <div class="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-                <div class="text-xs font-semibold text-slate-300">Word</div>
-                <div id="wordLabel" class="mt-1 text-lg font-semibold text-slate-100">—</div>
-              </div>
-
-              <div class="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-                <div class="text-xs font-semibold text-slate-300">Dica rápida</div>
-                <div id="hintLabel" class="mt-1 text-sm text-slate-200">
-                  Selecione uma palavra para começar.
-                </div>
-              </div>
-
-              <div class="md:col-span-2 rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-                <div class="text-xs font-semibold text-slate-300">Description</div>
-                <div id="descLabel" class="mt-1 text-sm text-slate-200">—</div>
-              </div>
-
-              <div class="md:col-span-2 rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-                <div class="text-xs font-semibold text-slate-300">Use case</div>
-                <div id="useLabel" class="mt-1 text-sm text-slate-200">—</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 3: Sentence Trainer -->
-          <div class="mt-4 rounded-3xl bg-white/5 p-6 ring-1 ring-white/10">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <div class="text-xs text-slate-400">Passo 3</div>
-                <h3 class="text-lg font-semibold">Escreva uma frase e valide</h3>
-                <p class="mt-1 text-sm text-slate-300">
-                  Escreva uma frase em inglês usando a palavra selecionada. Vamos checar gramática,
-                  clareza e sugerir melhorias.
-                </p>
-              </div>
-
-              <button
-                id="btnValidate"
-                class="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled
-              >
-                Validar frase
-              </button>
             </div>
 
             <div class="mt-4">
-              <label class="block text-xs text-slate-400" for="sentenceInput">Sua frase (em inglês)</label>
+              <label class="block text-xs text-slate-400" for="sentenceInput">Sua frase</label>
               <textarea
                 id="sentenceInput"
-                rows="4"
-                placeholder="Ex: I want to improve my English vocabulary by practicing every day."
-                class="mt-1 w-full resize-none rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                disabled
+                rows="3"
+                class="mt-1 w-full rounded-2xl bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="Ex: I want to pursue my goals."
               ></textarea>
 
-              <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                <div id="wordUsageHint">Selecione uma palavra para habilitar o treino.</div>
-                <div>
-                  <span class="rounded-full bg-white/5 px-3 py-1 ring-1 ring-white/10">
-                    Auto: valida quando você parar de digitar
-                  </span>
-                </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button
+                  id="btnCopySentence"
+                  class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                >
+                  Copiar
+                </button>
+                <button
+                  id="btnClearSentence"
+                  class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                >
+                  Limpar
+                </button>
+
+                <button
+                  id="btnNewRound"
+                  class="hidden rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400"
+                  title="Iniciar nova rodada de 5 palavras"
+                >
+                  Nova rodada
+                </button>
               </div>
             </div>
 
-            <!-- Validation Results -->
-            <div id="validationBox" class="mt-4 hidden rounded-2xl p-4 text-sm ring-1"></div>
-
-            <div class="mt-4 grid gap-3 md:grid-cols-2">
-              <div class="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-                <div class="text-xs font-semibold text-slate-300">Sugestões (melhorias)</div>
-                <ul id="suggestionsList" class="mt-2 space-y-2 text-sm text-slate-200">
-                  <li class="text-slate-400">—</li>
-                </ul>
-              </div>
-
-              <div class="rounded-2xl bg-slate-900/60 p-4 ring-1 ring-white/10">
-                <div class="text-xs font-semibold text-slate-300">Frase sugerida (opcional)</div>
-                <div id="betterSentence" class="mt-2 text-sm text-slate-200 text-slate-400">—</div>
-
-                <div class="mt-3 flex gap-2">
-                  <button
-                    id="btnApplySuggestion"
-                    class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled
-                  >
-                    Aplicar sugestão
-                  </button>
-
-                  <button
-                    id="btnCopySentence"
-                    class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled
-                  >
-                    Copiar frase
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <p class="mt-4 text-xs text-slate-500">
-              * Validação de gramática e estilo via LanguageTool (serviço público). Se falhar, mostramos uma validação básica.
-            </p>
+            <div id="validationResult" class="mt-5 grid gap-3"></div>
           </div>
         </div>
-
-        <!-- Right: Words List -->
-        <aside class="lg:col-span-5">
-          <div class="rounded-3xl bg-white/5 p-6 ring-1 ring-white/10">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold">Resultados</h3>
-              <p id="countLabel" class="text-sm text-slate-300">0 itens</p>
-            </div>
-
-            <div id="statusBox" class="mt-4 hidden rounded-2xl p-4 text-sm ring-1"></div>
-
-            <div id="cards" class="mt-4 grid gap-3"></div>
-          </div>
-
-          <div class="mt-4 rounded-3xl bg-white/5 p-6 ring-1 ring-white/10">
-            <h3 class="text-lg font-semibold">Dicas de usabilidade</h3>
-            <ul class="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-300">
-              <li>Gere as palavras e selecione uma no dropdown.</li>
-              <li>Escreva uma frase usando a palavra e pressione <b>Ctrl + Enter</b> para validar.</li>
-              <li>Use o filtro para achar uma palavra rapidamente.</li>
-              <li>Copie a palavra e a frase com um clique.</li>
-            </ul>
-          </div>
-        </aside>
       </section>
-
-      <footer class="mt-10 border-t border-white/10 pt-6 text-center text-xs text-slate-500">
-        Feito para Front-end Engineering (FIAP).
-      </footer>
     </main>
 
-    <!-- Modal: Settings -->
+    <!-- Settings Modal -->
     <div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4">
       <div class="w-full max-w-xl rounded-3xl bg-slate-950 p-6 ring-1 ring-white/10">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="text-lg font-semibold">Configurar endpoint do BFF</h3>
-            <p class="mt-1 text-sm text-slate-300">
-              Ajuste a URL do endpoint <code>/ask</code>. Padrão: Render.
-            </p>
+            <h3 class="text-lg font-semibold">Configurações</h3>
+            <p class="mt-1 text-sm text-slate-300">Endpoint do BFF e opções avançadas.</p>
           </div>
           <button
             id="btnCloseSettings"
@@ -297,12 +231,47 @@
           <input
             id="apiUrlInput"
             type="text"
-            class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="https://fiap-bff-9aojr.onrender.com/ask"
+            class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            placeholder="https://seu-bff.onrender.com/ask"
           />
-          <p class="mt-2 text-xs text-slate-500">
-            Dica: se você rodar local, pode ser algo como <code>http://localhost:3001/ask</code>.
-          </p>
+        </div>
+
+        <div class="mt-4 grid gap-3 rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p class="text-sm font-semibold text-slate-100">Ações rápidas</p>
+              <p class="text-xs text-slate-400">Ver endpoint e editar JSON.</p>
+            </div>
+
+            <a
+              id="endpointLink"
+              href="#"
+              target="_blank"
+              rel="noreferrer"
+              class="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+            >
+              Ver endpoint
+            </a>
+          </div>
+
+          <details class="group">
+            <summary class="cursor-pointer list-none text-sm text-slate-200">
+              <span class="inline-flex items-center gap-2">
+                <span class="rounded-lg bg-white/5 px-2 py-1 text-xs ring-1 ring-white/10">Avançado</span>
+                Editar tudo (JSON)
+              </span>
+            </summary>
+
+            <div class="mt-3">
+              <label class="block text-xs text-slate-400" for="configJson">Configuração</label>
+              <textarea
+                id="configJson"
+                rows="6"
+                class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                spellcheck="false"
+              ></textarea>
+            </div>
+          </details>
         </div>
 
         <div class="mt-5 flex justify-end gap-2">
@@ -314,7 +283,7 @@
           </button>
           <button
             id="btnSaveApi"
-            class="rounded-2xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-400"
+            class="rounded-2xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-400"
           >
             Salvar
           </button>
@@ -322,6 +291,6 @@
       </div>
     </div>
 
-    <script src="./app.js"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>
