@@ -5,10 +5,10 @@
  * - Sorteia 5 únicas por rodada e evita repetição local
  * - Validação chama o backend /validate (mensagens PT)
  * - Auto valida quando parar de digitar (idle)
- * - NÃO preenche frase automaticamente: mostra placeholder motivacional
+ * - Campo da frase SEMPRE vazio (sem autopreenchimento)
  */
 
-const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask"; // só usado se não existir config salva
+const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask"; // usado só se não houver config salva
 
 // -------- Elements --------
 const btnStartGame = document.getElementById("btnStartGame");
@@ -53,7 +53,10 @@ function loadConfig() {
   try {
     const obj = JSON.parse(saved);
     return {
-      bffApiUrl: obj?.bffApiUrl && String(obj.bffApiUrl).startsWith("http") ? String(obj.bffApiUrl) : DEFAULT_API_URL,
+      bffApiUrl:
+        obj?.bffApiUrl && String(obj.bffApiUrl).startsWith("http")
+          ? String(obj.bffApiUrl)
+          : DEFAULT_API_URL,
     };
   } catch {
     return { bffApiUrl: DEFAULT_API_URL };
@@ -66,7 +69,7 @@ function saveConfig(next) {
 let CONFIG = loadConfig();
 let API_URL = CONFIG.bffApiUrl;
 
-endpointLink.href = API_URL;
+if (endpointLink) endpointLink.href = API_URL;
 if (configJson) configJson.value = JSON.stringify(CONFIG, null, 2);
 
 // -------- Helpers --------
@@ -80,6 +83,7 @@ function escapeHtml(str) {
 }
 
 function setStatus(text, type = "info") {
+  if (!statusBadge) return;
   statusBadge.textContent = text;
   statusBadge.classList.remove("hidden");
 
@@ -92,6 +96,7 @@ function setStatus(text, type = "info") {
   else statusBadge.classList.add("bg-white/5", "ring-white/10", "text-slate-200");
 }
 function clearStatus() {
+  if (!statusBadge) return;
   statusBadge.classList.add("hidden");
   statusBadge.textContent = "";
 }
@@ -125,7 +130,7 @@ function difficultyLabel(v) {
 function getMotivationalPlaceholder(word) {
   const w = word;
   const prompts = [
-    `Desafio: escreva uma frase curta usando "${w}" (bem natural).`,
+    `Escreva uma frase curta usando "${w}" (bem natural).`,
     `Use "${w}" em uma frase simples: sujeito + verbo + complemento.`,
     `Crie uma frase sobre você usando "${w}" (ex.: I ... "${w}" ...).`,
     `Tente uma frase no passado usando "${w}" (se fizer sentido).`,
@@ -134,54 +139,6 @@ function getMotivationalPlaceholder(word) {
     `Capriche: escreva uma frase com "${w}" e um detalhe (tempo/lugar/razão).`,
   ];
   return prompts[Math.floor(Math.random() * prompts.length)];
-}
-
-// -------- Game rules --------
-const ROUND_WORDS = 5;
-
-// 🔥 Pool grande por nível (resolve repetição)
-const POOL_BY_LEVEL = { easy: 40, medium: 50, hard: 60, veryhard: 70 };
-
-let queue = [];
-let shown = [];
-let seenWords = new Set();
-let currentItem = null;
-
-// para relatório final
-let roundStats = { difficulty: "medium", items: [] };
-
-function updateCounter() {
-  gameCounter.textContent = `${shown.length} / ${ROUND_WORDS}`;
-}
-
-function enableGameButtons(isReady) {
-  btnNextWord.disabled = !isReady;
-  btnNextWord.classList.toggle("opacity-50", !isReady);
-  btnNextWord.classList.toggle("cursor-not-allowed", !isReady);
-}
-
-function renderHistory() {
-  wordList.innerHTML = "";
-  if (!shown.length) {
-    wordList.innerHTML = `
-      <li class="rounded-2xl bg-slate-900/40 p-4 text-sm text-slate-300 ring-1 ring-white/10">
-        Ainda nada por aqui.
-      </li>`;
-    return;
-  }
-
-  shown.slice().reverse().forEach((item) => {
-    const li = document.createElement("li");
-    li.className = "mb-2 rounded-2xl bg-white/5 px-4 py-3 text-sm ring-1 ring-white/10 hover:bg-white/10 cursor-pointer";
-    li.innerHTML = `
-      <div class="flex items-center justify-between gap-2">
-        <span class="font-semibold">${escapeHtml(item.word)}</span>
-        <span class="text-xs text-slate-400">${escapeHtml(item.type || "")}</span>
-      </div>
-    `;
-    li.addEventListener("click", () => showCurrent(item));
-    wordList.appendChild(li);
-  });
 }
 
 function randomPortugueseUseCase(word) {
@@ -196,7 +153,65 @@ function randomPortugueseUseCase(word) {
   return templates[Math.floor(Math.random() * templates.length)];
 }
 
+// -------- Game rules --------
+const ROUND_WORDS = 5;
+
+// Pool grande por nível (evita repetição)
+const POOL_BY_LEVEL = { easy: 40, medium: 50, hard: 60, veryhard: 70 };
+
+let queue = [];
+let shown = [];
+let seenWords = new Set();
+let currentItem = null;
+
+// relatório final
+let roundStats = { difficulty: "medium", items: [] };
+
+function updateCounter() {
+  if (!gameCounter) return;
+  gameCounter.textContent = `${shown.length} / ${ROUND_WORDS}`;
+}
+
+function enableGameButtons(isReady) {
+  if (!btnNextWord) return;
+  btnNextWord.disabled = !isReady;
+  btnNextWord.classList.toggle("opacity-50", !isReady);
+  btnNextWord.classList.toggle("cursor-not-allowed", !isReady);
+}
+
+function renderHistory() {
+  if (!wordList) return;
+  wordList.innerHTML = "";
+
+  if (!shown.length) {
+    wordList.innerHTML = `
+      <li class="rounded-2xl bg-slate-900/40 p-4 text-sm text-slate-300 ring-1 ring-white/10">
+        Ainda nada por aqui.
+      </li>`;
+    return;
+  }
+
+  shown
+    .slice()
+    .reverse()
+    .forEach((item) => {
+      const li = document.createElement("li");
+      li.className =
+        "mb-2 rounded-2xl bg-white/5 px-4 py-3 text-sm ring-1 ring-white/10 hover:bg-white/10 cursor-pointer";
+      li.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-semibold">${escapeHtml(item.word)}</span>
+          <span class="text-xs text-slate-400">${escapeHtml(item.type || "")}</span>
+        </div>
+      `;
+      li.addEventListener("click", () => showCurrent(item));
+      wordList.appendChild(li);
+    });
+}
+
 function renderDetails(item) {
+  if (!details) return;
+
   if (!item) {
     details.innerHTML = `
       <div class="rounded-2xl bg-slate-900/40 p-4 ring-1 ring-white/10">
@@ -232,7 +247,7 @@ function renderDetails(item) {
         item.useCaseEn
           ? `
         <div class="mt-4">
-          <p class="text-xs font-semibold text-slate-300">Exemplo (EN) — só pra referência</p>
+          <p class="text-xs font-semibold text-slate-300">Exemplo (EN) — só referência</p>
           <div class="mt-2 rounded-2xl bg-slate-950/50 p-3 text-sm text-slate-200 ring-1 ring-white/10">
             ${escapeHtml(item.useCaseEn)}
           </div>
@@ -246,18 +261,15 @@ function renderDetails(item) {
 
 function showCurrent(item) {
   currentItem = item;
-  currentWordEl.textContent = item?.word || "—";
-  currentTypeEl.textContent = item?.type || "—";
-  currentHintEl.textContent = item ? "Agora escreva uma frase usando essa palavra 👇" : "—";
+  if (currentWordEl) currentWordEl.textContent = item?.word || "—";
+  if (currentTypeEl) currentTypeEl.textContent = item?.type || "—";
+  if (currentHintEl) currentHintEl.textContent = item ? "Agora escreva uma frase usando essa palavra 👇" : "—";
   renderDetails(item);
 }
 
-// -------- Fetch pool + pick 5 uniques --------
+// -------- Fetch pool + pick uniques --------
 async function fetchPool(level) {
   const count = POOL_BY_LEVEL[level] || 50;
-
-  // ✅ usa a URL que o usuário já configurou
-  // ✅ usa o backend melhorado: /ask?level=...&count=...
   const url = `${API_URL}?level=${encodeURIComponent(level)}&count=${count}`;
 
   const res = await fetch(url);
@@ -284,14 +296,13 @@ function pickUniqueRandom(items, n, seenSet) {
 
 // -------- Round flow --------
 function resetRoundUI() {
-  validationResult.innerHTML = "";
-  btnNewRound.classList.add("hidden");
+  if (validationResult) validationResult.innerHTML = "";
+  if (btnNewRound) btnNewRound.classList.add("hidden");
 }
 
 async function startRound() {
-  const level = difficultySelect.value;
+  const level = difficultySelect ? difficultySelect.value : "medium";
 
-  // reset estado da rodada
   queue = [];
   shown = [];
   seenWords = new Set();
@@ -304,17 +315,15 @@ async function startRound() {
   renderHistory();
   renderDetails(null);
 
-  currentWordEl.textContent = "—";
-  currentTypeEl.textContent = "—";
-  currentHintEl.textContent = `Carregando rodada (${difficultyLabel(level)})…`;
+  if (currentWordEl) currentWordEl.textContent = "—";
+  if (currentTypeEl) currentTypeEl.textContent = "—";
+  if (currentHintEl) currentHintEl.textContent = `Carregando rodada (${difficultyLabel(level)})…`;
 
   try {
     setStatus("Buscando palavras…", "info");
     const pool = await fetchPool(level);
 
-    // monta fila com 5 únicas
     queue = pickUniqueRandom(pool, ROUND_WORDS, seenWords);
-
     if (queue.length < ROUND_WORDS) {
       setStatus("Poucas palavras únicas retornaram. Tente novamente.", "error");
       enableGameButtons(false);
@@ -329,7 +338,7 @@ async function startRound() {
   } catch (e) {
     console.error(e);
     setStatus("Erro ao iniciar rodada. Verifique endpoint/Render.", "error");
-    currentHintEl.textContent = "Falha ao carregar. Confira o endpoint em ⚙️.";
+    if (currentHintEl) currentHintEl.textContent = "Falha ao carregar. Confira o endpoint em ⚙️.";
   }
 }
 
@@ -350,13 +359,15 @@ function nextWord() {
   renderHistory();
   showCurrent(item);
 
-  // ✅ AJUSTE PEDIDO:
-  // Não preencher a frase automaticamente (nem com exemplo pronto).
-  // Deixa o campo vazio e coloca um placeholder motivacional.
-  sentenceInput.value = "";
-  sentenceInput.placeholder = getMotivationalPlaceholder(item.word);
+  // ✅ GARANTIA: campo SEMPRE vazio (nunca autopreenche)
+  if (sentenceInput) {
+    sentenceInput.value = "";
+    sentenceInput.placeholder = getMotivationalPlaceholder(item.word);
+    // força eventos antigos a não recolocarem texto
+    sentenceInput.dispatchEvent(new Event("input"));
+  }
 
-  validationResult.innerHTML = "";
+  if (validationResult) validationResult.innerHTML = "";
   clearStatus();
 }
 
@@ -365,22 +376,24 @@ function resetAll() {
   shown = [];
   seenWords = new Set();
   currentItem = null;
-  roundStats = { difficulty: difficultySelect.value, items: [] };
+  roundStats = { difficulty: difficultySelect ? difficultySelect.value : "medium", items: [] };
 
   enableGameButtons(false);
   updateCounter();
   renderHistory();
   renderDetails(null);
 
-  currentWordEl.textContent = "—";
-  currentTypeEl.textContent = "—";
-  currentHintEl.textContent = "Clique em Começar para iniciar uma rodada de 5 palavras.";
+  if (currentWordEl) currentWordEl.textContent = "—";
+  if (currentTypeEl) currentTypeEl.textContent = "—";
+  if (currentHintEl) currentHintEl.textContent = "Clique em Começar para iniciar uma rodada de 5 palavras.";
 
-  validationResult.innerHTML = "";
-  sentenceInput.value = "";
-  sentenceInput.placeholder = "Escreva uma frase em inglês usando a palavra atual…";
-  autoValidateToggle.checked = false;
-  btnNewRound.classList.add("hidden");
+  if (validationResult) validationResult.innerHTML = "";
+  if (sentenceInput) {
+    sentenceInput.value = "";
+    sentenceInput.placeholder = "Escreva uma frase em inglês usando a palavra atual…";
+  }
+  if (autoValidateToggle) autoValidateToggle.checked = false;
+  if (btnNewRound) btnNewRound.classList.add("hidden");
   clearStatus();
 }
 
@@ -392,6 +405,7 @@ const AUTO_IDLE_MS = 1300;
 const MIN_CHARS_TO_VALIDATE = 10;
 
 function renderCelebrate() {
+  if (!validationResult) return;
   validationResult.innerHTML = `
     <div class="rounded-2xl bg-emerald-500/10 p-4 text-sm text-emerald-200 ring-1 ring-emerald-400/30">
       🎉 Perfeito! Frase correta ✅
@@ -400,6 +414,8 @@ function renderCelebrate() {
 }
 
 function renderTryAgainPt(matches) {
+  if (!validationResult) return;
+
   const summary = matches.slice(0, 3).map((m) => `${m.ptCategory || "Ajustes"}`).join(" • ");
 
   validationResult.innerHTML = `
@@ -481,11 +497,11 @@ async function validateSentence(text, { record = true } = {}) {
 }
 
 function scheduleAutoValidate() {
-  if (!autoValidateToggle.checked) return;
+  if (!autoValidateToggle || !autoValidateToggle.checked) return;
 
   clearTimeout(validateDebounce);
   validateDebounce = setTimeout(() => {
-    const value = (sentenceInput.value || "").trim();
+    const value = (sentenceInput?.value || "").trim();
     if (value.length >= MIN_CHARS_TO_VALIDATE) validateSentence(value);
   }, AUTO_IDLE_MS);
 }
@@ -493,12 +509,11 @@ function scheduleAutoValidate() {
 // -------- End of round report (PT) --------
 function endRoundReport() {
   enableGameButtons(false);
-  btnNewRound.classList.remove("hidden");
+  if (btnNewRound) btnNewRound.classList.remove("hidden");
 
   const total = roundStats.items.length;
   const okCount = roundStats.items.filter((x) => x.ok).length;
 
-  // conta categorias
   const counter = new Map();
   for (const it of roundStats.items) {
     if (it.ok) continue;
@@ -519,7 +534,7 @@ function endRoundReport() {
   const catsHtml = topCats.length
     ? `<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
          <p class="text-sm font-semibold">O que mais apareceu</p>
-         <p class="mt-1 text-sm text-slate-300">${topCats.map(([c,n]) => `${escapeHtml(c)} (${n})`).join(" • ")}</p>
+         <p class="mt-1 text-sm text-slate-300">${topCats.map(([c, n]) => `${escapeHtml(c)} (${n})`).join(" • ")}</p>
        </div>`
     : "";
 
@@ -527,150 +542,171 @@ function endRoundReport() {
     ? `<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
          <p class="text-sm font-semibold">Sugestões do que melhorar (PT)</p>
          <ul class="mt-2 grid gap-2">
-           ${tips.slice(0, 6).map(t => `<li class="rounded-2xl bg-slate-950/50 p-3 text-sm ring-1 ring-white/10">${escapeHtml(t)}</li>`).join("")}
+           ${tips
+             .slice(0, 6)
+             .map((t) => `<li class="rounded-2xl bg-slate-950/50 p-3 text-sm ring-1 ring-white/10">${escapeHtml(t)}</li>`)
+             .join("")}
          </ul>
        </div>`
     : "";
 
-  validationResult.innerHTML = `
-    <div class="rounded-2xl bg-emerald-500/10 p-4 text-sm text-emerald-200 ring-1 ring-emerald-400/30">
-      ✅ Rodada concluída! Acertos: ${okCount}/${total}.
-    </div>
-    ${catsHtml}
-    ${tipsHtml}
-    <div class="rounded-2xl bg-slate-950/50 p-4 text-sm text-slate-200 ring-1 ring-white/10">
-      Troque o nível e clique em <b>Nova rodada</b> para continuar 🚀
-    </div>
-  `;
+  if (validationResult) {
+    validationResult.innerHTML = `
+      <div class="rounded-2xl bg-emerald-500/10 p-4 text-sm text-emerald-200 ring-1 ring-emerald-400/30">
+        ✅ Rodada concluída! Acertos: ${okCount}/${total}.
+      </div>
+      ${catsHtml}
+      ${tipsHtml}
+      <div class="rounded-2xl bg-slate-950/50 p-4 text-sm text-slate-200 ring-1 ring-white/10">
+        Troque o nível e clique em <b>Nova rodada</b> para continuar 🚀
+      </div>
+    `;
+  }
 
-  currentHintEl.textContent = "Rodada finalizada. Veja o relatório e inicie uma nova rodada.";
+  if (currentHintEl) currentHintEl.textContent = "Rodada finalizada. Veja o relatório e inicie uma nova rodada.";
 }
 
 // -------- Settings modal --------
 function openSettings() {
-  apiUrlInput.value = API_URL;
-  endpointLink.href = API_URL;
+  if (apiUrlInput) apiUrlInput.value = API_URL;
+  if (endpointLink) endpointLink.href = API_URL;
   if (configJson) configJson.value = JSON.stringify(CONFIG, null, 2);
 
+  if (!settingsModal) return;
   settingsModal.classList.remove("hidden");
   settingsModal.classList.add("flex");
 }
 function closeSettings() {
+  if (!settingsModal) return;
   settingsModal.classList.add("hidden");
   settingsModal.classList.remove("flex");
 }
 
-btnSettings.addEventListener("click", openSettings);
-btnCloseSettings.addEventListener("click", closeSettings);
-settingsModal.addEventListener("click", (e) => {
-  if (e.target === settingsModal) closeSettings();
-});
+if (btnSettings) btnSettings.addEventListener("click", openSettings);
+if (btnCloseSettings) btnCloseSettings.addEventListener("click", closeSettings);
+if (settingsModal) {
+  settingsModal.addEventListener("click", (e) => {
+    if (e.target === settingsModal) closeSettings();
+  });
+}
 
-btnResetApi.addEventListener("click", () => {
-  CONFIG = { bffApiUrl: DEFAULT_API_URL };
-  API_URL = CONFIG.bffApiUrl;
+if (btnResetApi) {
+  btnResetApi.addEventListener("click", () => {
+    CONFIG = { bffApiUrl: DEFAULT_API_URL };
+    API_URL = CONFIG.bffApiUrl;
 
-  apiUrlInput.value = API_URL;
-  endpointLink.href = API_URL;
-  if (configJson) configJson.value = JSON.stringify(CONFIG, null, 2);
+    if (apiUrlInput) apiUrlInput.value = API_URL;
+    if (endpointLink) endpointLink.href = API_URL;
+    if (configJson) configJson.value = JSON.stringify(CONFIG, null, 2);
 
-  resetAll();
-});
+    resetAll();
+  });
+}
 
-btnSaveApi.addEventListener("click", () => {
-  const jsonVal = (configJson?.value || "").trim();
-  if (jsonVal) {
-    try {
-      const parsed = JSON.parse(jsonVal);
-      const bffApiUrl = String(parsed?.bffApiUrl || "").trim();
+if (btnSaveApi) {
+  btnSaveApi.addEventListener("click", () => {
+    const jsonVal = (configJson?.value || "").trim();
+    if (jsonVal) {
+      try {
+        const parsed = JSON.parse(jsonVal);
+        const bffApiUrl = String(parsed?.bffApiUrl || "").trim();
 
-      if (!bffApiUrl.startsWith("http")) {
-        setStatus("JSON inválido: bffApiUrl precisa começar com http:// ou https://", "error");
+        if (!bffApiUrl.startsWith("http")) {
+          setStatus("JSON inválido: bffApiUrl precisa começar com http:// ou https://", "error");
+          return;
+        }
+
+        CONFIG = { bffApiUrl };
+        saveConfig(CONFIG);
+
+        API_URL = CONFIG.bffApiUrl;
+        if (endpointLink) endpointLink.href = API_URL;
+
+        closeSettings();
+        setStatus("Configurações salvas ✅", "success");
+        setTimeout(clearStatus, 900);
+
+        resetAll();
+        return;
+      } catch {
+        setStatus("JSON inválido. Verifique aspas, vírgulas e chaves.", "error");
         return;
       }
+    }
 
-      CONFIG = { bffApiUrl };
-      saveConfig(CONFIG);
-
-      API_URL = CONFIG.bffApiUrl;
-      endpointLink.href = API_URL;
-
-      closeSettings();
-      setStatus("Configurações salvas ✅", "success");
-      setTimeout(clearStatus, 900);
-
-      resetAll();
-      return;
-    } catch {
-      setStatus("JSON inválido. Verifique aspas, vírgulas e chaves.", "error");
+    const val = (apiUrlInput?.value || "").trim();
+    if (!val.startsWith("http")) {
+      setStatus("URL inválida. Use http:// ou https://", "error");
       return;
     }
-  }
 
-  const val = apiUrlInput.value.trim();
-  if (!val.startsWith("http")) {
-    setStatus("URL inválida. Use http:// ou https://", "error");
-    return;
-  }
+    CONFIG = { bffApiUrl: val };
+    saveConfig(CONFIG);
 
-  CONFIG = { bffApiUrl: val };
-  saveConfig(CONFIG);
+    API_URL = val;
+    if (endpointLink) endpointLink.href = API_URL;
 
-  API_URL = val;
-  endpointLink.href = API_URL;
+    closeSettings();
+    setStatus("Endpoint atualizado ✅", "success");
+    setTimeout(clearStatus, 900);
 
-  closeSettings();
-  setStatus("Endpoint atualizado ✅", "success");
-  setTimeout(clearStatus, 900);
-
-  resetAll();
-});
+    resetAll();
+  });
+}
 
 // -------- Buttons & Events --------
-btnStartGame.addEventListener("click", startRound);
-btnNextWord.addEventListener("click", nextWord);
-btnClear.addEventListener("click", resetAll);
-btnNewRound.addEventListener("click", startRound);
+if (btnStartGame) btnStartGame.addEventListener("click", startRound);
+if (btnNextWord) btnNextWord.addEventListener("click", nextWord);
+if (btnClear) btnClear.addEventListener("click", resetAll);
+if (btnNewRound) btnNewRound.addEventListener("click", startRound);
 
-btnValidate.addEventListener("click", () => validateSentence(sentenceInput.value));
+if (btnValidate) btnValidate.addEventListener("click", () => validateSentence(sentenceInput?.value || ""));
 
-btnClearSentence.addEventListener("click", () => {
-  sentenceInput.value = "";
-  validationResult.innerHTML = "";
-  clearStatus();
-});
+if (btnClearSentence) {
+  btnClearSentence.addEventListener("click", () => {
+    if (sentenceInput) sentenceInput.value = "";
+    if (validationResult) validationResult.innerHTML = "";
+    clearStatus();
+  });
+}
 
-btnCopySentence.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(sentenceInput.value || "");
-    setStatus("Copiado ✅", "success");
-    setTimeout(clearStatus, 800);
-  } catch {
-    setStatus("Não consegui copiar (bloqueio do navegador).", "error");
-  }
-});
+if (btnCopySentence) {
+  btnCopySentence.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(sentenceInput?.value || "");
+      setStatus("Copiado ✅", "success");
+      setTimeout(clearStatus, 800);
+    } catch {
+      setStatus("Não consegui copiar (bloqueio do navegador).", "error");
+    }
+  });
+}
 
-autoValidateToggle.addEventListener("change", () => {
-  if (autoValidateToggle.checked) {
-    setStatus("Automático ligado ✅ (valida quando você para de digitar)", "success");
-    setTimeout(clearStatus, 900);
-    scheduleAutoValidate();
-  } else {
-    setStatus("Automático desligado.", "info");
-    setTimeout(clearStatus, 700);
-  }
-});
+if (autoValidateToggle) {
+  autoValidateToggle.addEventListener("change", () => {
+    if (autoValidateToggle.checked) {
+      setStatus("Automático ligado ✅ (valida quando você para de digitar)", "success");
+      setTimeout(clearStatus, 900);
+      scheduleAutoValidate();
+    } else {
+      setStatus("Automático desligado.", "info");
+      setTimeout(clearStatus, 700);
+    }
+  });
+}
 
-sentenceInput.addEventListener("input", () => {
-  if (autoValidateToggle.checked) scheduleAutoValidate();
-});
+if (sentenceInput) {
+  sentenceInput.addEventListener("input", () => {
+    if (autoValidateToggle?.checked) scheduleAutoValidate();
+  });
 
-sentenceInput.addEventListener("blur", () => {
-  if (autoValidateToggle.checked) {
-    const v = (sentenceInput.value || "").trim();
-    if (v.length >= MIN_CHARS_TO_VALIDATE) validateSentence(v);
-  }
-});
+  sentenceInput.addEventListener("blur", () => {
+    if (autoValidateToggle?.checked) {
+      const v = (sentenceInput.value || "").trim();
+      if (v.length >= MIN_CHARS_TO_VALIDATE) validateSentence(v);
+    }
+  });
+}
 
 // Init
 resetAll();
