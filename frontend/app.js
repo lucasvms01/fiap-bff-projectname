@@ -1,11 +1,7 @@
 /**
- * WordWise - Frontend (Profissional)
- * - Rodada de 5 palavras (uma por vez)
- * - Busca pool grande no backend por nível: /ask?level=...&count=...
- * - Sorteia 5 únicas por rodada e evita repetição local
- * - Validação chama o backend /validate (mensagens PT)
- * - Auto valida quando parar de digitar (idle)
- * - Campo da frase SEMPRE vazio (sem autopreenchimento)
+ * WordWise - Frontend (MANTÉM comportamento original + melhorias UX)
+ * - NÃO altera o que existia: Detalhes completo, caso PT aleatório, exemplo EN, placeholder motivacional
+ * - Melhora UX: loading, botões desabilitados, erro elegante, timeout
  */
 
 const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask"; // usado só se não houver config salva
@@ -92,9 +88,11 @@ function setStatus(text, type = "info") {
   statusBadge.classList.remove("bg-white/5", "ring-white/10", "text-slate-200");
 
   if (type === "error") statusBadge.classList.add("bg-rose-500/15", "ring-rose-400/30", "text-rose-200");
-  else if (type === "success") statusBadge.classList.add("bg-emerald-500/15", "ring-emerald-400/30", "text-emerald-200");
+  else if (type === "success")
+    statusBadge.classList.add("bg-emerald-500/15", "ring-emerald-400/30", "text-emerald-200");
   else statusBadge.classList.add("bg-white/5", "ring-white/10", "text-slate-200");
 }
+
 function clearStatus() {
   if (!statusBadge) return;
   statusBadge.classList.add("hidden");
@@ -113,6 +111,7 @@ function normalizeAskResponse(data) {
   // backend pode devolver array puro ou {items: [...]}
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.items)) return data.items;
+  if (data && Array.isArray(data.data)) return data.data; // compat extra
   return [];
 }
 
@@ -153,6 +152,108 @@ function randomPortugueseUseCase(word) {
   return templates[Math.floor(Math.random() * templates.length)];
 }
 
+// -------- UX: Busy / Loading --------
+let UI_BUSY = false;
+const _btnText = new Map();
+
+function setButtonBusy(btn, busy, busyText = "Processando…") {
+  if (!btn) return;
+  if (busy) {
+    if (!_btnText.has(btn)) _btnText.set(btn, btn.textContent);
+    btn.disabled = true;
+    btn.classList.add("opacity-50", "cursor-not-allowed");
+    btn.textContent = busyText;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("opacity-50", "cursor-not-allowed");
+    if (_btnText.has(btn)) btn.textContent = _btnText.get(btn);
+  }
+}
+
+function setBusy(busy, label = "Carregando…") {
+  UI_BUSY = busy;
+  setButtonBusy(btnStartGame, busy, label);
+  setButtonBusy(btnNewRound, busy, label);
+  setButtonBusy(btnNextWord, busy, "Carregando…");
+  setButtonBusy(btnValidate, busy, "Validando…");
+  setButtonBusy(btnClear, busy, "…");
+  setButtonBusy(btnCopySentence, busy, "…");
+  setButtonBusy(btnClearSentence, busy, "…");
+}
+
+// -------- API Fetch (erro elegante + timeout) --------
+class ApiError extends Error {
+  constructor(message, status, details) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+async function safeJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function normalizeApiError(data, fallbackMessage) {
+  // backend manda { error, details }
+  if (data && typeof data === "object") {
+    return {
+      msg: data.error || fallbackMessage,
+      details: data.details,
+    };
+  }
+  return { msg: fallbackMessage, details: undefined };
+}
+
+async function apiFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? 20000;
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, { ...options, signal: options.signal || controller.signal });
+    const data = await safeJson(res);
+
+    if (!res.ok) {
+      const { msg, details } = normalizeApiError(data, `Erro HTTP ${res.status}`);
+      throw new ApiError(msg || "Erro na requisição", res.status, details);
+    }
+
+    return data;
+  } catch (err) {
+    if (err?.name === "AbortError") throw new ApiError("Tempo esgotado. Tente novamente.", 408);
+    if (err instanceof ApiError) throw err;
+    throw new ApiError("Falha de rede. Verifique sua conexão.", 0);
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function renderApiErrorBox(whereEl, title, details) {
+  if (!whereEl) return;
+  const list =
+    Array.isArray(details) && details.length
+      ? `<ul class="mt-2 list-disc pl-5 text-xs text-rose-100/90">
+          ${details.slice(0, 6).map((d) => `<li>${escapeHtml(String(d))}</li>`).join("")}
+        </ul>`
+      : "";
+
+  whereEl.innerHTML = `
+    <div class="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-200 ring-1 ring-rose-400/30">
+      ⚠️ ${escapeHtml(title || "Ocorreu um erro.")}
+      ${list}
+      <div class="mt-3 text-xs text-rose-100/80">
+        Dica: confira o endpoint em <b>⚙️</b> e se o backend está rodando.
+      </div>
+    </div>
+  `;
+}
+
 // -------- Game rules --------
 const ROUND_WORDS = 5;
 
@@ -173,10 +274,15 @@ function updateCounter() {
 }
 
 function enableGameButtons(isReady) {
-  if (!btnNextWord) return;
-  btnNextWord.disabled = !isReady;
-  btnNextWord.classList.toggle("opacity-50", !isReady);
-  btnNextWord.classList.toggle("cursor-not-allowed", !isReady);
+  // mantém a lógica original + melhora (validador e utilitários)
+  if (btnNextWord) {
+    btnNextWord.disabled = !isReady;
+    btnNextWord.classList.toggle("opacity-50", !isReady);
+    btnNextWord.classList.toggle("cursor-not-allowed", !isReady);
+  }
+  if (btnValidate) btnValidate.disabled = !isReady;
+  if (btnCopySentence) btnCopySentence.disabled = !isReady;
+  if (btnClearSentence) btnClearSentence.disabled = !isReady;
 }
 
 function renderHistory() {
@@ -271,10 +377,7 @@ function showCurrent(item) {
 async function fetchPool(level) {
   const count = POOL_BY_LEVEL[level] || 50;
   const url = `${API_URL}?level=${encodeURIComponent(level)}&count=${count}`;
-
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erro HTTP ${res.status} ao buscar palavras.`);
-  const data = await res.json();
+  const data = await apiFetch(url, { timeoutMs: 20000 });
   return normalizeAskResponse(data);
 }
 
@@ -301,6 +404,8 @@ function resetRoundUI() {
 }
 
 async function startRound() {
+  if (UI_BUSY) return;
+
   const level = difficultySelect ? difficultySelect.value : "medium";
 
   queue = [];
@@ -320,29 +425,43 @@ async function startRound() {
   if (currentHintEl) currentHintEl.textContent = `Carregando rodada (${difficultyLabel(level)})…`;
 
   try {
+    setBusy(true, "Buscando…");
     setStatus("Buscando palavras…", "info");
+
     const pool = await fetchPool(level);
 
     queue = pickUniqueRandom(pool, ROUND_WORDS, seenWords);
     if (queue.length < ROUND_WORDS) {
+      setBusy(false);
       setStatus("Poucas palavras únicas retornaram. Tente novamente.", "error");
       enableGameButtons(false);
       return;
     }
 
+    setBusy(false);
     setStatus("Rodada pronta ✅", "success");
     setTimeout(clearStatus, 900);
 
     enableGameButtons(true);
     nextWord();
   } catch (e) {
+    setBusy(false);
     console.error(e);
-    setStatus("Erro ao iniciar rodada. Verifique endpoint/Render.", "error");
+
+    const msg = e?.message || "Erro ao iniciar rodada. Verifique endpoint/Render.";
+    setStatus(msg, "error");
+
+    if (validationResult && e?.details) {
+      renderApiErrorBox(validationResult, msg, Array.isArray(e.details) ? e.details : []);
+    }
+
     if (currentHintEl) currentHintEl.textContent = "Falha ao carregar. Confira o endpoint em ⚙️.";
   }
 }
 
 function nextWord() {
+  if (UI_BUSY) return;
+
   if (shown.length >= ROUND_WORDS) {
     endRoundReport();
     return;
@@ -363,7 +482,6 @@ function nextWord() {
   if (sentenceInput) {
     sentenceInput.value = "";
     sentenceInput.placeholder = getMotivationalPlaceholder(item.word);
-    // força eventos antigos a não recolocarem texto
     sentenceInput.dispatchEvent(new Event("input"));
   }
 
@@ -372,6 +490,8 @@ function nextWord() {
 }
 
 function resetAll() {
+  if (UI_BUSY) return;
+
   queue = [];
   shown = [];
   seenWords = new Set();
@@ -403,6 +523,25 @@ let validateAbort = null;
 
 const AUTO_IDLE_MS = 1300;
 const MIN_CHARS_TO_VALIDATE = 10;
+
+function mapMatchCategoryToPt(m) {
+  const cat = (m?.rule?.issueType || m?.rule?.category?.id || "").toLowerCase();
+  if (cat.includes("missp")) return "Ortografia";
+  if (cat.includes("typ")) return "Tipografia";
+  if (cat.includes("punct")) return "Pontuação";
+  if (cat.includes("grammar")) return "Gramática";
+  if (cat.includes("style")) return "Estilo";
+  return "Ajustes gerais";
+}
+
+function normalizeMatches(matches) {
+  return (matches || []).map((m) => ({
+    ...m,
+    ptCategory: mapMatchCategoryToPt(m),
+    ptMessage: m?.message || m?.shortMessage || "Sugestão",
+    replacements: Array.isArray(m?.replacements) ? m.replacements.map((r) => r?.value).filter(Boolean) : [],
+  }));
+}
 
 function renderCelebrate() {
   if (!validationResult) return;
@@ -452,6 +591,8 @@ function recordRoundStat({ word, sentence, ok, matches }) {
 }
 
 async function validateSentence(text, { record = true } = {}) {
+  if (UI_BUSY) return;
+
   const cleaned = (text || "").trim();
   if (!cleaned) return;
   if (!currentItem?.word) return;
@@ -461,21 +602,22 @@ async function validateSentence(text, { record = true } = {}) {
 
   const validateUrl = getValidateUrlFromAsk(API_URL);
 
-  setStatus("Validando…", "info");
-
   try {
-    const res = await fetch(validateUrl, {
+    setBusy(true, "Validando…");
+    setStatus("Validando…", "info");
+
+    const data = await apiFetch(validateUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: cleaned }),
       signal: validateAbort.signal,
+      timeoutMs: 20000,
     });
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const data = await res.json();
     const ok = !!data.ok;
-    const matches = Array.isArray(data.matches) ? data.matches : [];
+    const matches = normalizeMatches(Array.isArray(data.matches) ? data.matches : []);
+
+    setBusy(false);
 
     if (ok) {
       setStatus("Correto ✅", "success");
@@ -491,8 +633,12 @@ async function validateSentence(text, { record = true } = {}) {
     if (record) recordRoundStat({ word: currentItem.word, sentence: cleaned, ok: false, matches });
   } catch (err) {
     if (err?.name === "AbortError") return;
-    console.error(err);
-    setStatus("Erro ao validar. Verifique o backend /validate.", "error");
+    setBusy(false);
+
+    // erro elegante vindo do backend
+    const msg = err?.message || "Erro ao validar. Verifique o backend /validate.";
+    setStatus(msg, "error");
+    if (validationResult) renderApiErrorBox(validationResult, msg, Array.isArray(err?.details) ? err.details : []);
   }
 }
 
@@ -502,7 +648,7 @@ function scheduleAutoValidate() {
   clearTimeout(validateDebounce);
   validateDebounce = setTimeout(() => {
     const value = (sentenceInput?.value || "").trim();
-    if (value.length >= MIN_CHARS_TO_VALIDATE) validateSentence(value);
+    if (value.length >= MIN_CHARS_TO_VALIDATE) validateSentence(value, { record: false });
   }, AUTO_IDLE_MS);
 }
 
@@ -592,6 +738,8 @@ if (settingsModal) {
 
 if (btnResetApi) {
   btnResetApi.addEventListener("click", () => {
+    if (UI_BUSY) return;
+
     CONFIG = { bffApiUrl: DEFAULT_API_URL };
     API_URL = CONFIG.bffApiUrl;
 
@@ -605,6 +753,8 @@ if (btnResetApi) {
 
 if (btnSaveApi) {
   btnSaveApi.addEventListener("click", () => {
+    if (UI_BUSY) return;
+
     const jsonVal = (configJson?.value || "").trim();
     if (jsonVal) {
       try {
@@ -660,10 +810,11 @@ if (btnNextWord) btnNextWord.addEventListener("click", nextWord);
 if (btnClear) btnClear.addEventListener("click", resetAll);
 if (btnNewRound) btnNewRound.addEventListener("click", startRound);
 
-if (btnValidate) btnValidate.addEventListener("click", () => validateSentence(sentenceInput?.value || ""));
+if (btnValidate) btnValidate.addEventListener("click", () => validateSentence(sentenceInput?.value || "", { record: true }));
 
 if (btnClearSentence) {
   btnClearSentence.addEventListener("click", () => {
+    if (UI_BUSY) return;
     if (sentenceInput) sentenceInput.value = "";
     if (validationResult) validationResult.innerHTML = "";
     clearStatus();
@@ -672,6 +823,7 @@ if (btnClearSentence) {
 
 if (btnCopySentence) {
   btnCopySentence.addEventListener("click", async () => {
+    if (UI_BUSY) return;
     try {
       await navigator.clipboard.writeText(sentenceInput?.value || "");
       setStatus("Copiado ✅", "success");
@@ -697,13 +849,14 @@ if (autoValidateToggle) {
 
 if (sentenceInput) {
   sentenceInput.addEventListener("input", () => {
+    if (validationResult) validationResult.innerHTML = "";
     if (autoValidateToggle?.checked) scheduleAutoValidate();
   });
 
   sentenceInput.addEventListener("blur", () => {
     if (autoValidateToggle?.checked) {
       const v = (sentenceInput.value || "").trim();
-      if (v.length >= MIN_CHARS_TO_VALIDATE) validateSentence(v);
+      if (v.length >= MIN_CHARS_TO_VALIDATE) validateSentence(v, { record: false });
     }
   });
 }

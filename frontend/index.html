@@ -1,26 +1,50 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WordWise</title>
 
+    <!-- Tailwind (CDN) + dark mode via class -->
+    <script>
+      window.tailwind = window.tailwind || {};
+      window.tailwind.config = { darkMode: "class" };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Theme bootstrap: aplica tema antes de renderizar (evita "flash") -->
+    <script>
+      (function () {
+        const STORAGE_KEY = "WORDWISE_THEME"; // "light" | "dark" | "system"
+        const saved = localStorage.getItem(STORAGE_KEY) || "system";
+        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const resolved = saved === "system" ? (prefersDark ? "dark" : "light") : saved;
+
+        document.documentElement.classList.toggle("dark", resolved === "dark");
+        document.documentElement.style.colorScheme = resolved;
+        document.documentElement.dataset.theme = saved;
+      })();
+    </script>
+
     <style>
-      :root { color-scheme: dark; }
       .scrollbar::-webkit-scrollbar { width: 10px; }
-      .scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.25); border-radius: 999px; }
+      .scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.35); border-radius: 999px; }
       .scrollbar::-webkit-scrollbar-track { background: transparent; }
     </style>
   </head>
 
-  <body class="min-h-screen bg-slate-950 text-slate-100">
+  <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <!-- Header -->
-    <header class="border-b border-white/10 bg-gradient-to-r from-slate-950/85 via-slate-950/65 to-slate-950/85 backdrop-blur">
+    <header
+      class="border-b border-black/10 bg-gradient-to-r from-slate-50/85 via-slate-50/65 to-slate-50/85 backdrop-blur
+             dark:border-white/10 dark:from-slate-950/85 dark:via-slate-950/65 dark:to-slate-950/85"
+    >
       <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
         <div class="flex items-center gap-3">
-          <div class="grid h-11 w-11 place-items-center rounded-2xl ring-1 ring-white/10 bg-white/5">
+          <div
+            class="grid h-11 w-11 place-items-center rounded-2xl ring-1 ring-black/10 bg-black/5
+                   dark:ring-white/10 dark:bg-white/5"
+          >
             <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
               <defs>
                 <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
@@ -37,14 +61,28 @@
 
           <div>
             <h1 class="text-lg font-semibold leading-tight">WordWise</h1>
-            <p class="text-sm text-slate-300">Aprenda jogando: uma palavra por vez, do jeito certo.</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+              Aprenda jogando: uma palavra por vez, do jeito certo.
+            </p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
+          <!-- Theme toggle (rápido) -->
+          <button
+            id="btnTheme"
+            class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
+                   dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
+            title="Alternar tema"
+            aria-label="Alternar tema"
+          >
+            <span id="themeIcon">🌙</span>
+          </button>
+
           <button
             id="btnSettings"
-            class="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+            class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
+                   dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10"
             title="Configurações"
           >
             ⚙️
@@ -56,21 +94,30 @@
     <main class="mx-auto max-w-6xl px-4 py-8">
       <section class="grid gap-6 lg:grid-cols-3">
         <!-- Left -->
-        <div class="rounded-3xl bg-white/5 p-5 ring-1 ring-white/10 lg:col-span-1">
-          <div class="flex items-center justify-between gap-2">
+        <div
+          class="rounded-3xl bg-black/5 p-5 ring-1 ring-black/10
+                 dark:bg-white/5 dark:ring-white/10 lg:col-span-1"
+        >
+          <!-- ✅ Ajuste do topo: título + frase, botões abaixo -->
+          <div>
             <h2 class="text-base font-semibold">Game de palavras</h2>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Cinco palavras por rodada foque em <b>usar</b>, não só memorizar 😉
+            </p>
 
-            <div class="flex items-center gap-2">
+            <div class="mt-4 grid grid-cols-3 gap-2">
               <button
                 id="btnStartGame"
-                class="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400"
+                class="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500
+                       dark:bg-sky-500 dark:hover:bg-sky-400"
               >
                 Começar
               </button>
 
               <button
                 id="btnNextWord"
-                class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
+                       dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
                 disabled
               >
                 Próxima
@@ -78,7 +125,8 @@
 
               <button
                 id="btnClear"
-                class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
+                       dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
               >
                 Reset
               </button>
@@ -86,85 +134,109 @@
           </div>
 
           <!-- Dificuldade -->
-          <div class="mt-4 grid gap-2">
-            <label class="text-xs text-slate-400" for="difficultySelect">Dificuldade</label>
+          <div class="mt-5 grid gap-2">
+            <label class="text-xs text-slate-600 dark:text-slate-400" for="difficultySelect">Dificuldade</label>
             <select
               id="difficultySelect"
-              class="w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              class="w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
+                     dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
             >
               <option value="easy">Fácil</option>
               <option value="medium" selected>Médio</option>
               <option value="hard">Difícil</option>
               <option value="veryhard">Muito difícil</option>
             </select>
-            <p class="text-xs text-slate-500">
+            <p class="text-xs text-slate-500 dark:text-slate-500">
               A dificuldade influencia quais palavras entram na rodada.
             </p>
           </div>
 
           <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span id="gameCounter" class="rounded-2xl bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">
+            <span
+              id="gameCounter"
+              class="rounded-2xl bg-black/5 px-3 py-2 text-xs ring-1 ring-black/10
+                     dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
+            >
               0 / 5
             </span>
 
-            <span id="statusBadge" class="hidden rounded-2xl bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">
+            <span
+              id="statusBadge"
+              class="hidden rounded-2xl bg-black/5 px-3 py-2 text-xs ring-1 ring-black/10
+                     dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
+            >
               ...
             </span>
           </div>
 
-          <div class="mt-4 rounded-3xl bg-slate-900/40 p-5 ring-1 ring-white/10">
-            <p class="text-xs font-semibold text-slate-300">Palavra atual</p>
+          <div
+            class="mt-4 rounded-3xl bg-white p-5 ring-1 ring-black/10
+                   dark:bg-slate-900/40 dark:ring-white/10"
+          >
+            <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">Palavra atual</p>
             <div class="mt-2 flex items-center justify-between gap-3">
-              <h3 id="currentWord" class="text-2xl font-semibold tracking-tight text-slate-100">—</h3>
-              <span id="currentType" class="rounded-xl bg-white/5 px-3 py-2 text-xs text-slate-200 ring-1 ring-white/10">—</span>
+              <h3 id="currentWord" class="text-2xl font-semibold tracking-tight">—</h3>
+              <span
+                id="currentType"
+                class="rounded-xl bg-black/5 px-3 py-2 text-xs ring-1 ring-black/10
+                       dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
+              >—</span>
             </div>
-            <p id="currentHint" class="mt-2 text-sm text-slate-300">
+            <p id="currentHint" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
               Clique em <b>Começar</b> para iniciar uma rodada de 5 palavras.
             </p>
           </div>
 
           <div class="mt-4">
             <div class="flex items-center justify-between">
-              <p class="text-sm font-semibold text-slate-200">Já saiu</p>
-              <p class="text-xs text-slate-400">rodada atual</p>
+              <p class="text-sm font-semibold">Já saiu</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">rodada atual</p>
             </div>
             <ul id="wordList" class="scrollbar mt-2 max-h-[360px] overflow-auto pr-1"></ul>
           </div>
         </div>
 
         <!-- Right -->
-        <div class="rounded-3xl bg-white/5 p-5 ring-1 ring-white/10 lg:col-span-2">
+        <div
+          class="rounded-3xl bg-black/5 p-5 ring-1 ring-black/10
+                 dark:bg-white/5 dark:ring-white/10 lg:col-span-2"
+        >
           <div>
             <h2 class="text-base font-semibold">Detalhes</h2>
-            <p class="mt-1 text-sm text-slate-300">
-              Descrição + exemplo em português, e o validador com modo automático inteligente.
+            <!-- ✅ Remove o "+" -->
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Descrição e exemplo em português, e o validador com modo automático inteligente.
             </p>
           </div>
 
           <div id="details" class="mt-5 grid gap-4">
-            <div class="rounded-2xl bg-slate-900/40 p-4 ring-1 ring-white/10">
-              <p class="text-sm text-slate-300">Nenhuma palavra ainda. Comece o game 🙂</p>
+            <div class="rounded-2xl bg-white p-4 ring-1 ring-black/10 dark:bg-slate-900/40 dark:ring-white/10">
+              <p class="text-sm text-slate-600 dark:text-slate-300">Nenhuma palavra ainda. Comece o game 🙂</p>
             </div>
           </div>
 
-          <div class="mt-6 rounded-3xl bg-slate-900/40 p-5 ring-1 ring-white/10">
+          <div class="mt-6 rounded-3xl bg-white p-5 ring-1 ring-black/10 dark:bg-slate-900/40 dark:ring-white/10">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 class="text-base font-semibold">Validador de frase</h3>
-                <p class="mt-1 text-sm text-slate-300">
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                   Ele só valida quando você <b>para de digitar</b> (mais profissional).
                 </p>
               </div>
 
               <div class="flex items-center gap-2">
-                <label class="inline-flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10">
-                  <input id="autoValidateToggle" type="checkbox" class="h-4 w-4 accent-sky-400" />
+                <label
+                  class="inline-flex items-center gap-2 rounded-2xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10
+                         dark:bg-white/5 dark:ring-white/10"
+                >
+                  <input id="autoValidateToggle" type="checkbox" class="h-4 w-4 accent-sky-600 dark:accent-sky-400" />
                   Automático
                 </label>
 
                 <button
                   id="btnValidate"
-                  class="rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400"
+                  class="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500
+                         dark:bg-sky-500 dark:hover:bg-sky-400"
                 >
                   Validar
                 </button>
@@ -172,31 +244,35 @@
             </div>
 
             <div class="mt-4">
-              <label class="block text-xs text-slate-400" for="sentenceInput">Sua frase</label>
+              <label class="block text-xs text-slate-600 dark:text-slate-400" for="sentenceInput">Sua frase</label>
               <textarea
                 id="sentenceInput"
                 rows="3"
-                class="mt-1 w-full rounded-2xl bg-slate-950/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                class="mt-1 w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
+                       dark:bg-slate-950/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
                 placeholder="Ex: I want to pursue my goals."
               ></textarea>
 
               <div class="mt-3 flex flex-wrap gap-2">
                 <button
                   id="btnCopySentence"
-                  class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                  class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
+                         dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
                 >
                   Copiar
                 </button>
                 <button
                   id="btnClearSentence"
-                  class="rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+                  class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
+                         dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
                 >
                   Limpar
                 </button>
 
                 <button
                   id="btnNewRound"
-                  class="hidden rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400"
+                  class="hidden rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500
+                         dark:bg-emerald-500 dark:hover:bg-emerald-400"
                   title="Iniciar nova rodada de 5 palavras"
                 >
                   Nova rodada
@@ -212,35 +288,65 @@
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4">
-      <div class="w-full max-w-xl rounded-3xl bg-slate-950 p-6 ring-1 ring-white/10">
+      <div class="w-full max-w-xl rounded-3xl bg-white p-6 ring-1 ring-black/10 dark:bg-slate-950 dark:ring-white/10">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h3 class="text-lg font-semibold">Configurações</h3>
-            <p class="mt-1 text-sm text-slate-300">Endpoint do BFF e opções avançadas.</p>
+            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Endpoint do BFF e preferências visuais.</p>
           </div>
           <button
             id="btnCloseSettings"
-            class="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+            class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
+                   dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10"
           >
             ✕
           </button>
         </div>
 
+        <!-- ✅ Tema dentro das configurações -->
+        <div class="mt-4 grid gap-2">
+          <label class="block text-xs text-slate-600 dark:text-slate-400" for="themeSelect">Tema</label>
+          <div class="flex gap-2">
+            <select
+              id="themeSelect"
+              class="w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
+                     dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
+            >
+              <option value="system">Sistema</option>
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
+            </select>
+
+            <button
+              id="btnApplyTheme"
+              class="shrink-0 rounded-2xl bg-black/5 px-4 py-3 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
+                     dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
+              title="Aplicar tema"
+            >
+              Aplicar
+            </button>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-500">
+            “Sistema” acompanha o tema do seu dispositivo.
+          </p>
+        </div>
+
         <div class="mt-4">
-          <label class="block text-xs text-slate-400" for="apiUrlInput">URL completa do endpoint</label>
+          <label class="block text-xs text-slate-600 dark:text-slate-400" for="apiUrlInput">URL completa do endpoint</label>
           <input
             id="apiUrlInput"
             type="text"
-            class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            class="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
+                   dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
             placeholder="https://seu-bff.onrender.com/ask"
           />
         </div>
 
-        <div class="mt-4 grid gap-3 rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+        <div class="mt-4 grid gap-3 rounded-2xl bg-black/5 p-4 ring-1 ring-black/10 dark:bg-white/5 dark:ring-white/10">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p class="text-sm font-semibold text-slate-100">Ações rápidas</p>
-              <p class="text-xs text-slate-400">Ver endpoint e editar JSON.</p>
+              <p class="text-sm font-semibold">Ações rápidas</p>
+              <p class="text-xs text-slate-600 dark:text-slate-400">Ver endpoint e editar JSON.</p>
             </div>
 
             <a
@@ -248,26 +354,30 @@
               href="#"
               target="_blank"
               rel="noreferrer"
-              class="rounded-xl bg-white/5 px-3 py-2 text-sm text-slate-200 ring-1 ring-white/10 hover:bg-white/10"
+              class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
+                     dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10"
             >
               Ver endpoint
             </a>
           </div>
 
           <details class="group">
-            <summary class="cursor-pointer list-none text-sm text-slate-200">
+            <summary class="cursor-pointer list-none text-sm">
               <span class="inline-flex items-center gap-2">
-                <span class="rounded-lg bg-white/5 px-2 py-1 text-xs ring-1 ring-white/10">Avançado</span>
+                <span class="rounded-lg bg-black/5 px-2 py-1 text-xs ring-1 ring-black/10 dark:bg-white/5 dark:ring-white/10">
+                  Avançado
+                </span>
                 Editar tudo (JSON)
               </span>
             </summary>
 
             <div class="mt-3">
-              <label class="block text-xs text-slate-400" for="configJson">Configuração</label>
+              <label class="block text-xs text-slate-600 dark:text-slate-400" for="configJson">Configuração</label>
               <textarea
                 id="configJson"
                 rows="6"
-                class="mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm text-slate-100 ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                class="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
+                       dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
                 spellcheck="false"
               ></textarea>
             </div>
@@ -277,19 +387,90 @@
         <div class="mt-5 flex justify-end gap-2">
           <button
             id="btnResetApi"
-            class="rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-slate-100 ring-1 ring-white/10 hover:bg-white/10"
+            class="rounded-2xl bg-black/5 px-4 py-3 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
+                   dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
           >
             Reset
           </button>
           <button
             id="btnSaveApi"
-            class="rounded-2xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-400"
+            class="rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500
+                   dark:bg-sky-500 dark:hover:bg-sky-400"
           >
             Salvar
           </button>
         </div>
       </div>
     </div>
+
+    <!-- Theme runtime: alterna e respeita mudanças do sistema quando "system" -->
+    <script>
+      (function () {
+        const STORAGE_KEY = "WORDWISE_THEME"; // "light" | "dark" | "system"
+        const btn = document.getElementById("btnTheme");
+        const icon = document.getElementById("themeIcon");
+        const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+
+        const themeSelect = document.getElementById("themeSelect");
+        const btnApplyTheme = document.getElementById("btnApplyTheme");
+
+        function getSaved() {
+          return localStorage.getItem(STORAGE_KEY) || "system";
+        }
+
+        function resolveTheme(saved) {
+          const prefersDark = media ? media.matches : false;
+          return saved === "system" ? (prefersDark ? "dark" : "light") : saved;
+        }
+
+        function applyTheme(saved) {
+          const resolved = resolveTheme(saved);
+          document.documentElement.classList.toggle("dark", resolved === "dark");
+          document.documentElement.style.colorScheme = resolved;
+          document.documentElement.dataset.theme = saved;
+
+          if (icon) icon.textContent = resolved === "dark" ? "🌙" : "☀️";
+          if (btn) btn.title = `Tema: ${saved === "system" ? "Sistema" : saved === "dark" ? "Escuro" : "Claro"} (clique para alternar)`;
+
+          // sincroniza select do modal
+          if (themeSelect) themeSelect.value = saved;
+        }
+
+        function setAndApply(saved) {
+          localStorage.setItem(STORAGE_KEY, saved);
+          applyTheme(saved);
+        }
+
+        function toggleThemeQuick() {
+          const saved = getSaved();
+          const resolved = resolveTheme(saved);
+          const next = resolved === "dark" ? "light" : "dark"; // fixa escolha do usuário
+          setAndApply(next);
+        }
+
+        // se estiver em system, acompanha mudanças do SO
+        if (media) {
+          const handler = () => {
+            const saved = getSaved();
+            if (saved === "system") applyTheme("system");
+          };
+          try { media.addEventListener("change", handler); } catch { media.addListener(handler); }
+        }
+
+        // init
+        applyTheme(getSaved());
+
+        if (btn) btn.addEventListener("click", toggleThemeQuick);
+
+        // aplicar tema pelo modal (sem conflitar com o app.js)
+        if (btnApplyTheme && themeSelect) {
+          btnApplyTheme.addEventListener("click", () => {
+            const v = themeSelect.value || "system";
+            setAndApply(v);
+          });
+        }
+      })();
+    </script>
 
     <script type="module" src="./app.js"></script>
   </body>
