@@ -1,20 +1,5 @@
 const axios = require("axios");
 
-/**
- * Configuração por ENV:
- * AI_PROVIDER=groq (default) | openai
- *
- * Se AI_PROVIDER=groq:
- *   GROQ_API_KEY=...
- *   AI_BASE_URL=https://api.groq.com/openai/v1
- *   AI_MODEL=llama-3.1-8b-instant (recomendado, leve)
- *
- * Se AI_PROVIDER=openai:
- *   OPENAI_API_KEY=...
- *   AI_BASE_URL=https://api.openai.com/v1
- *   AI_MODEL=gpt-4o-mini (exemplo)
- */
-
 function getConfig() {
   const provider = (process.env.AI_PROVIDER || "groq").toLowerCase();
 
@@ -22,37 +7,28 @@ function getConfig() {
     process.env.AI_BASE_URL ||
     (provider === "openai" ? "https://api.openai.com/v1" : "https://api.groq.com/openai/v1");
 
-  const apiKey =
-    provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
+  const apiKey = provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
 
   const model =
-    process.env.AI_MODEL ||
-    (provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant");
+    process.env.AI_MODEL || (provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant");
 
   if (!apiKey) {
-    throw new Error(
-      provider === "openai"
-        ? "OPENAI_API_KEY não configurada"
-        : "GROQ_API_KEY não configurada"
-    );
+    throw new Error(provider === "openai" ? "OPENAI_API_KEY não configurada" : "GROQ_API_KEY não configurada");
   }
 
   return { provider, baseURL, apiKey, model };
 }
 
-/**
- * Extrai um JSON array de dentro de um texto (fallback quando a IA manda texto junto)
- */
 function extractJSONArray(text) {
   const s = String(text || "").trim();
 
-  // tenta parse direto
+  // tenta JSON puro
   try {
     const direct = JSON.parse(s);
     if (Array.isArray(direct)) return direct;
   } catch (_) {}
 
-  // tenta extrair pelo primeiro [ e último ]
+  // tenta extrair o primeiro [ ... ]
   const start = s.indexOf("[");
   const end = s.lastIndexOf("]");
   if (start !== -1 && end !== -1 && end > start) {
@@ -64,80 +40,99 @@ function extractJSONArray(text) {
   throw new Error("Não foi possível extrair um JSON array válido da resposta da IA.");
 }
 
-/**
- * Valida e normaliza formato [{word, description, useCase}]
- */
-function normalizeOutput(arr) {
+function normalizeOutput(arr, count) {
   if (!Array.isArray(arr)) throw new Error("Resposta não é array.");
 
   const cleaned = arr
     .map((x) => ({
       word: String(x?.word || "").trim(),
-      description: String(x?.description || "").trim(),
-      useCase: String(x?.useCase || "").trim()
+      type: String(x?.type || "").trim(),
+      description: String(x?.description || "").trim(), // PT
+      useCaseEn: String(x?.useCaseEn || "").trim(), // EN
     }))
-    .filter((x) => x.word && x.description && x.useCase);
+    .filter((x) => x.word && x.description && x.useCaseEn);
 
-  if (cleaned.length < 3) {
-    throw new Error("Resposta da IA veio incompleta (menos de 3 itens válidos).");
+  // remove duplicadas por word (case-insensitive)
+  const uniq = [];
+  const seen = new Set();
+  for (const it of cleaned) {
+    const k = it.word.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    uniq.push(it);
   }
 
-  // Limita em 5 para bater com a tarefa
-  return cleaned.slice(0, 5);
+  if (uniq.length < 5) throw new Error("Resposta da IA veio incompleta (poucos itens válidos).");
+
+  return uniq.slice(0, count);
 }
 
-async function askOpenAI() {
+function levelPrompt(level) {
+  const map = {
+    easy: "fácil (A1–A2)",
+    medium: "intermediário (B1–B2)",
+    hard: "avançado (C1)",
+    veryhard: "muito avançado (C2 / vocabulário raro)",
+  };
+  return map[level] || map.medium;
+}
+
+async function askOpenAI({ level = "medium", count = 40, seed = "" } = {}) {
   const { baseURL, apiKey, model } = getConfig();
 
+  const safeCount = Math.max(5, Math.min(Number(count) || 40, 80));
+  const levelText = levelPrompt(level);
+
+  // ✅ Seed entra no prompt para "forçar" variação (evita repetir respostas idênticas)
   const prompt = `
-Gere 5 palavras em inglês (nível intermediário) e retorne APENAS um JSON válido (sem markdown, sem texto extra) no formato:
+SEED DE VARIAÇÃO: ${String(seed).slice(0, 64)}
+
+Gere ${safeCount} palavras em inglês no nível ${levelText}.
+Regras IMPORTANTES:
+- Evite repetir palavras comuns demais (ex.: very, good, bad, big, small).
+- Não repita palavras dentro do próprio resultado.
+- A cada chamada, traga palavras diferentes (use a SEED para variar).
+
+Retorne APENAS um JSON válido (sem markdown, sem texto extra) no formato:
+
 [
-  {"word":"...","description":"...","useCase":"..."},
+  {"word":"...","type":"verb|noun|adjective|adverb|phrasal verb","description":"(PT) ...","useCaseEn":"(EN) ..."},
   ...
 ]
-Regras:
+
+Regras de campos:
 - word: apenas a palavra (sem frase)
+- type: classe gramatical (verb/noun/adjective/adverb/phrasal verb)
 - description: significado/explicação curta em português (1-2 frases)
-- useCase: exemplo de frase em inglês usando a palavra (1 frase)
+- useCaseEn: uma frase em inglês usando a palavra (1 frase)
 `.trim();
 
-  // Chat Completions (compatível com Groq) :contentReference[oaicite:2]{index=2}
   const response = await axios.post(
     `${baseURL}/chat/completions`,
     {
       model,
-      temperature: 0.6,
+      temperature: 0.85, // um pouco mais alto para variar
       messages: [
         {
           role: "system",
-          content:
-            "Você é um assistente de ensino de inglês. Responda somente com o JSON solicitado."
+          content: "Você é um assistente de ensino de inglês. Responda somente com o JSON solicitado.",
         },
-        { role: "user", content: prompt }
-      ]
+        { role: "user", content: prompt },
+      ],
     },
     {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      timeout: 20000
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      timeout: 20000,
     }
   );
 
   const text = response?.data?.choices?.[0]?.message?.content;
-
-  if (!text) {
-    throw new Error("Resposta vazia do provedor de IA.");
-  }
+  if (!text) throw new Error("Resposta vazia do provedor de IA.");
 
   const extracted = extractJSONArray(text);
-  const data = normalizeOutput(extracted);
+  const data = normalizeOutput(extracted, safeCount);
 
-  return {
-    data,
-    timestamp: new Date().toISOString()
-  };
+  return { data, timestamp: new Date().toISOString() };
 }
 
 module.exports = { askOpenAI };

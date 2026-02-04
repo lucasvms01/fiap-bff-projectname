@@ -5,7 +5,10 @@
  * - Sorteia 5 únicas por rodada e evita repetição local
  * - Validação chama o backend /validate (mensagens PT)
  * - Auto valida quando parar de digitar (idle)
+<<<<<<< HEAD
  * - NÃO preenche frase automaticamente: mostra placeholder motivacional
+=======
+>>>>>>> 2fe4d58c0cf8e34a0ac1b88d7383084f22b7e8a3
  */
 
 const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask"; // só usado se não existir config salva
@@ -53,7 +56,11 @@ function loadConfig() {
   try {
     const obj = JSON.parse(saved);
     return {
+<<<<<<< HEAD
       bffApiUrl: obj?.bffApiUrl && String(obj.bffApiUrl).startsWith("http") ? String(obj.bffApiUrl) : DEFAULT_API_URL,
+=======
+      bffApiUrl: obj?.bffApiUrl && String(obj.bffApiUrl).startsWith("http") ? String(obj.bffApiUrl) : DEFAULT_API_URL
+>>>>>>> 2fe4d58c0cf8e34a0ac1b88d7383084f22b7e8a3
     };
   } catch {
     return { bffApiUrl: DEFAULT_API_URL };
@@ -122,6 +129,7 @@ function difficultyLabel(v) {
   return "Muito difícil";
 }
 
+<<<<<<< HEAD
 function getMotivationalPlaceholder(word) {
   const w = word;
   const prompts = [
@@ -140,6 +148,12 @@ function getMotivationalPlaceholder(word) {
 const ROUND_WORDS = 5;
 
 // 🔥 Pool grande por nível (resolve repetição)
+=======
+// -------- Game rules --------
+const ROUND_WORDS = 5;
+
+// 🔥 aqui está a mudança que resolve repetição no jogo
+>>>>>>> 2fe4d58c0cf8e34a0ac1b88d7383084f22b7e8a3
 const POOL_BY_LEVEL = { easy: 40, medium: 50, hard: 60, veryhard: 70 };
 
 let queue = [];
@@ -232,7 +246,11 @@ function renderDetails(item) {
         item.useCaseEn
           ? `
         <div class="mt-4">
+<<<<<<< HEAD
           <p class="text-xs font-semibold text-slate-300">Exemplo (EN) — só pra referência</p>
+=======
+          <p class="text-xs font-semibold text-slate-300">Exemplo (EN)</p>
+>>>>>>> 2fe4d58c0cf8e34a0ac1b88d7383084f22b7e8a3
           <div class="mt-2 rounded-2xl bg-slate-950/50 p-3 text-sm text-slate-200 ring-1 ring-white/10">
             ${escapeHtml(item.useCaseEn)}
           </div>
@@ -350,12 +368,17 @@ function nextWord() {
   renderHistory();
   showCurrent(item);
 
+<<<<<<< HEAD
   // ✅ AJUSTE PEDIDO:
   // Não preencher a frase automaticamente (nem com exemplo pronto).
   // Deixa o campo vazio e coloca um placeholder motivacional.
   sentenceInput.value = "";
   sentenceInput.placeholder = getMotivationalPlaceholder(item.word);
 
+=======
+  // sugestão inicial de frase (melhor usar o exemplo do backend se tiver)
+  sentenceInput.value = item.useCaseEn ? item.useCaseEn : `I want to ${item.word} my goals.`;
+>>>>>>> 2fe4d58c0cf8e34a0ac1b88d7383084f22b7e8a3
   validationResult.innerHTML = "";
   clearStatus();
 }
