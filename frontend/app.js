@@ -1,15 +1,16 @@
 /**
- * WordWise - Game Profissional
- * - Rodada fixa de 5 palavras
- * - Níveis: easy/medium/hard/veryhard (filtra pelo "peso" da palavra)
- * - Auto validate: valida apenas quando usuário PARA de digitar (idle)
- * - Relatório final (PT): sugestões do que melhorar nas frases
+ * WordWise - Frontend (Profissional)
+ * - Rodada de 5 palavras (uma por vez)
+ * - Busca pool grande no backend por nível: /ask?level=...&count=...
+ * - Sorteia 5 únicas por rodada e evita repetição local
+ * - Validação chama o backend /validate (mensagens PT)
+ * - Auto valida quando parar de digitar (idle)
+ * - NÃO preenche frase automaticamente: mostra placeholder motivacional
  */
 
-const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask";
-let LANGUAGETOOL_URL = "https://api.languagetool.org/v2/check";
+const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask"; // só usado se não existir config salva
 
-// ---------- Elements ----------
+// -------- Elements --------
 const btnStartGame = document.getElementById("btnStartGame");
 const btnNextWord = document.getElementById("btnNextWord");
 const btnClear = document.getElementById("btnClear");
@@ -45,21 +46,17 @@ const btnSaveApi = document.getElementById("btnSaveApi");
 const btnResetApi = document.getElementById("btnResetApi");
 const configJson = document.getElementById("configJson");
 
-// ---------- Config storage ----------
+// -------- Config storage --------
 function loadConfig() {
   const saved = localStorage.getItem("WORDWISE_CONFIG");
-  if (!saved) return { bffApiUrl: DEFAULT_API_URL, languageToolUrl: LANGUAGETOOL_URL };
+  if (!saved) return { bffApiUrl: DEFAULT_API_URL };
   try {
     const obj = JSON.parse(saved);
     return {
       bffApiUrl: obj?.bffApiUrl && String(obj.bffApiUrl).startsWith("http") ? String(obj.bffApiUrl) : DEFAULT_API_URL,
-      languageToolUrl:
-        obj?.languageToolUrl && String(obj.languageToolUrl).startsWith("http")
-          ? String(obj.languageToolUrl)
-          : LANGUAGETOOL_URL,
     };
   } catch {
-    return { bffApiUrl: DEFAULT_API_URL, languageToolUrl: LANGUAGETOOL_URL };
+    return { bffApiUrl: DEFAULT_API_URL };
   }
 }
 function saveConfig(next) {
@@ -68,12 +65,11 @@ function saveConfig(next) {
 
 let CONFIG = loadConfig();
 let API_URL = CONFIG.bffApiUrl;
-LANGUAGETOOL_URL = CONFIG.languageToolUrl;
 
 endpointLink.href = API_URL;
 if (configJson) configJson.value = JSON.stringify(CONFIG, null, 2);
 
-// ---------- Helpers ----------
+// -------- Helpers --------
 function escapeHtml(str) {
   return String(str ?? "")
     .replaceAll("&", "&amp;")
@@ -91,13 +87,9 @@ function setStatus(text, type = "info") {
   statusBadge.classList.remove("bg-emerald-500/15", "ring-emerald-400/30", "text-emerald-200");
   statusBadge.classList.remove("bg-white/5", "ring-white/10", "text-slate-200");
 
-  if (type === "error") {
-    statusBadge.classList.add("bg-rose-500/15", "ring-rose-400/30", "text-rose-200");
-  } else if (type === "success") {
-    statusBadge.classList.add("bg-emerald-500/15", "ring-emerald-400/30", "text-emerald-200");
-  } else {
-    statusBadge.classList.add("bg-white/5", "ring-white/10", "text-slate-200");
-  }
+  if (type === "error") statusBadge.classList.add("bg-rose-500/15", "ring-rose-400/30", "text-rose-200");
+  else if (type === "success") statusBadge.classList.add("bg-emerald-500/15", "ring-emerald-400/30", "text-emerald-200");
+  else statusBadge.classList.add("bg-white/5", "ring-white/10", "text-slate-200");
 }
 function clearStatus() {
   statusBadge.classList.add("hidden");
@@ -112,27 +104,60 @@ function shuffle(arr) {
   return arr;
 }
 
-// ---------- Game rules ----------
+function normalizeAskResponse(data) {
+  // backend pode devolver array puro ou {items: [...]}
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.items)) return data.items;
+  return [];
+}
+
+function getValidateUrlFromAsk(apiUrl) {
+  return String(apiUrl).replace(/\/ask\/?$/i, "/validate");
+}
+
+function difficultyLabel(v) {
+  if (v === "easy") return "Fácil";
+  if (v === "medium") return "Médio";
+  if (v === "hard") return "Difícil";
+  return "Muito difícil";
+}
+
+function getMotivationalPlaceholder(word) {
+  const w = word;
+  const prompts = [
+    `Desafio: escreva uma frase curta usando "${w}" (bem natural).`,
+    `Use "${w}" em uma frase simples: sujeito + verbo + complemento.`,
+    `Crie uma frase sobre você usando "${w}" (ex.: I ... "${w}" ...).`,
+    `Tente uma frase no passado usando "${w}" (se fizer sentido).`,
+    `Tente uma frase no futuro usando "${w}" (ex.: I will ...).`,
+    `Faça uma frase que você realmente diria no dia a dia com "${w}".`,
+    `Capriche: escreva uma frase com "${w}" e um detalhe (tempo/lugar/razão).`,
+  ];
+  return prompts[Math.floor(Math.random() * prompts.length)];
+}
+
+// -------- Game rules --------
 const ROUND_WORDS = 5;
 
-// Em vez de puxar 25 e ficar gigante, buscamos o necessário com margem
-const TARGET_POOL = 40;
-const MAX_FETCH_ATTEMPTS = 6;
+// 🔥 Pool grande por nível (resolve repetição)
+const POOL_BY_LEVEL = { easy: 40, medium: 50, hard: 60, veryhard: 70 };
 
-let pool = [];
 let queue = [];
 let shown = [];
 let seenWords = new Set();
 let currentItem = null;
 
-// Guardar resultados da rodada para relatório final
-let roundStats = {
-  difficulty: "medium",
-  items: [], // [{word, sentence, ok, matches, byCategory}]
-};
+// para relatório final
+let roundStats = { difficulty: "medium", items: [] };
 
 function updateCounter() {
   gameCounter.textContent = `${shown.length} / ${ROUND_WORDS}`;
+}
+
+function enableGameButtons(isReady) {
+  btnNextWord.disabled = !isReady;
+  btnNextWord.classList.toggle("opacity-50", !isReady);
+  btnNextWord.classList.toggle("cursor-not-allowed", !isReady);
 }
 
 function renderHistory() {
@@ -159,20 +184,11 @@ function renderHistory() {
   });
 }
 
-function showCurrent(item) {
-  currentItem = item;
-  currentWordEl.textContent = item?.word || "—";
-  currentTypeEl.textContent = item?.type || "—";
-  currentHintEl.textContent = item ? "Agora escreva uma frase usando essa palavra 👇" : "—";
-  renderDetails(item);
-}
-
 function randomPortugueseUseCase(word) {
   const w = word;
   const templates = [
     `Eu precisei "${w}" meus objetivos com disciplina, mesmo com dificuldades.`,
     `No trabalho, tive que "${w}" uma solução melhor antes do prazo.`,
-    `Ele decidiu "${w}" um sonho antigo e não desistiu.`,
     `Ela conseguiu "${w}" o que queria com muita determinação.`,
     `Quando você quer algo, você começa a "${w}" isso com foco.`,
     `Eu fui tentar "${w}" uma oportunidade que poderia mudar tudo.`,
@@ -211,106 +227,76 @@ function renderDetails(item) {
           ${escapeHtml(ptUse)}
         </div>
       </div>
+
+      ${
+        item.useCaseEn
+          ? `
+        <div class="mt-4">
+          <p class="text-xs font-semibold text-slate-300">Exemplo (EN) — só pra referência</p>
+          <div class="mt-2 rounded-2xl bg-slate-950/50 p-3 text-sm text-slate-200 ring-1 ring-white/10">
+            ${escapeHtml(item.useCaseEn)}
+          </div>
+        </div>
+      `
+          : ""
+      }
     </div>
   `;
 }
 
-// ---------- Difficulty filtering ----------
-function scoreWord(word) {
-  // heurística simples e bem prática: tamanho + “complexidade”
-  const w = String(word || "").trim();
-  if (!w) return 0;
-  const len = w.length;
-  const hasHyphen = w.includes("-");
-  const hasDouble = /(tt|ss|rr|mm|pp|cc|gg)/i.test(w);
-  const rareLetters = /[jqxz]/i.test(w);
-  return len + (hasHyphen ? 2 : 0) + (hasDouble ? 1 : 0) + (rareLetters ? 2 : 0);
+function showCurrent(item) {
+  currentItem = item;
+  currentWordEl.textContent = item?.word || "—";
+  currentTypeEl.textContent = item?.type || "—";
+  currentHintEl.textContent = item ? "Agora escreva uma frase usando essa palavra 👇" : "—";
+  renderDetails(item);
 }
 
-function matchesDifficulty(word, difficulty) {
-  const s = scoreWord(word);
-  if (difficulty === "easy") return s <= 7;            // palavras curtas / simples
-  if (difficulty === "medium") return s >= 6 && s <= 10;
-  if (difficulty === "hard") return s >= 9 && s <= 13;
-  return s >= 12;                                     // veryhard
-}
+// -------- Fetch pool + pick 5 uniques --------
+async function fetchPool(level) {
+  const count = POOL_BY_LEVEL[level] || 50;
 
-function normalizeWordItem(raw) {
-  return {
-    word: String(raw?.word ?? raw?.palavra ?? "").trim(),
-    description: String(raw?.description ?? raw?.descricao ?? "").trim(),
-    type: String(raw?.type ?? raw?.classe ?? "").trim(),
-  };
-}
+  // ✅ usa a URL que o usuário já configurou
+  // ✅ usa o backend melhorado: /ask?level=...&count=...
+  const url = `${API_URL}?level=${encodeURIComponent(level)}&count=${count}`;
 
-async function fetchWordBatch() {
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Erro HTTP ${res.status} ao buscar palavras.`);
   const data = await res.json();
-  const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
-  return items.map(normalizeWordItem).filter((x) => x.word);
+  return normalizeAskResponse(data);
 }
 
-async function buildPoolForDifficulty(difficulty) {
-  setStatus("Gerando palavras da rodada…", "info");
+function pickUniqueRandom(items, n, seenSet) {
+  const arr = items.slice();
+  shuffle(arr);
 
-  const collected = [];
-  let attempts = 0;
-
-  while (collected.length < TARGET_POOL && attempts < MAX_FETCH_ATTEMPTS) {
-    attempts += 1;
-    const batch = await fetchWordBatch();
-    shuffle(batch);
-
-    for (const item of batch) {
-      const key = item.word.toLowerCase();
-      if (seenWords.has(key)) continue;
-      if (!matchesDifficulty(item.word, difficulty)) continue;
-
-      seenWords.add(key);
-      collected.push(item);
-      if (collected.length >= TARGET_POOL) break;
-    }
+  const out = [];
+  for (const it of arr) {
+    const key = String(it.word || "").toLowerCase();
+    if (!key) continue;
+    if (seenSet.has(key)) continue;
+    seenSet.add(key);
+    out.push(it);
+    if (out.length >= n) break;
   }
-
-  if (!collected.length) {
-    setStatus("Não consegui obter palavras nesse nível. Tente outro nível.", "error");
-    return [];
-  }
-
-  setStatus(`Rodada pronta ✅ (${difficultyLabel(difficulty)})`, "success");
-  setTimeout(clearStatus, 900);
-  return collected;
+  return out;
 }
 
-function difficultyLabel(v) {
-  if (v === "easy") return "Fácil";
-  if (v === "medium") return "Médio";
-  if (v === "hard") return "Difícil";
-  return "Muito difícil";
-}
-
-// ---------- Round flow ----------
-function enableGameButtons(isReady) {
-  btnNextWord.disabled = !isReady;
-  btnNextWord.classList.toggle("opacity-50", !isReady);
-  btnNextWord.classList.toggle("cursor-not-allowed", !isReady);
-}
-
+// -------- Round flow --------
 function resetRoundUI() {
   validationResult.innerHTML = "";
   btnNewRound.classList.add("hidden");
 }
 
 async function startRound() {
-  // limpa rodada atual
-  pool = [];
+  const level = difficultySelect.value;
+
+  // reset estado da rodada
   queue = [];
   shown = [];
   seenWords = new Set();
   currentItem = null;
-
-  roundStats = { difficulty: difficultySelect.value, items: [] };
+  roundStats = { difficulty: level, items: [] };
 
   resetRoundUI();
   enableGameButtons(false);
@@ -320,30 +306,34 @@ async function startRound() {
 
   currentWordEl.textContent = "—";
   currentTypeEl.textContent = "—";
-  currentHintEl.textContent = "Carregando rodada…";
+  currentHintEl.textContent = `Carregando rodada (${difficultyLabel(level)})…`;
 
   try {
-    pool = await buildPoolForDifficulty(roundStats.difficulty);
+    setStatus("Buscando palavras…", "info");
+    const pool = await fetchPool(level);
 
-    // monta fila de 5 palavras aleatórias
-    shuffle(pool);
-    queue = pool.slice(0, ROUND_WORDS);
+    // monta fila com 5 únicas
+    queue = pickUniqueRandom(pool, ROUND_WORDS, seenWords);
 
-    enableGameButtons(queue.length > 0);
-    updateCounter();
-    renderHistory();
+    if (queue.length < ROUND_WORDS) {
+      setStatus("Poucas palavras únicas retornaram. Tente novamente.", "error");
+      enableGameButtons(false);
+      return;
+    }
 
-    // mostra a primeira
+    setStatus("Rodada pronta ✅", "success");
+    setTimeout(clearStatus, 900);
+
+    enableGameButtons(true);
     nextWord();
   } catch (e) {
     console.error(e);
-    setStatus("Erro ao iniciar rodada.", "error");
-    currentHintEl.textContent = "Falha ao carregar. Verifique o endpoint.";
+    setStatus("Erro ao iniciar rodada. Verifique endpoint/Render.", "error");
+    currentHintEl.textContent = "Falha ao carregar. Confira o endpoint em ⚙️.";
   }
 }
 
 function nextWord() {
-  // se já completou 5 palavras, encerra a rodada
   if (shown.length >= ROUND_WORDS) {
     endRoundReport();
     return;
@@ -351,7 +341,6 @@ function nextWord() {
 
   const item = queue.shift();
   if (!item) {
-    // se fila acabar antes, encerra (não deve acontecer)
     endRoundReport();
     return;
   }
@@ -361,13 +350,17 @@ function nextWord() {
   renderHistory();
   showCurrent(item);
 
-  // sugere base de frase
-  sentenceInput.value = `I want to ${item.word} my goals.`;
+  // ✅ AJUSTE PEDIDO:
+  // Não preencher a frase automaticamente (nem com exemplo pronto).
+  // Deixa o campo vazio e coloca um placeholder motivacional.
+  sentenceInput.value = "";
+  sentenceInput.placeholder = getMotivationalPlaceholder(item.word);
+
   validationResult.innerHTML = "";
+  clearStatus();
 }
 
 function resetAll() {
-  pool = [];
   queue = [];
   shown = [];
   seenWords = new Set();
@@ -385,41 +378,18 @@ function resetAll() {
 
   validationResult.innerHTML = "";
   sentenceInput.value = "";
+  sentenceInput.placeholder = "Escreva uma frase em inglês usando a palavra atual…";
   autoValidateToggle.checked = false;
   btnNewRound.classList.add("hidden");
   clearStatus();
 }
 
-// ---------- Validation (profissional: só após parar de digitar) ----------
+// -------- Validation (via backend /validate) --------
 let validateDebounce = null;
 let validateAbort = null;
 
-const AUTO_IDLE_MS = 1300;   // <- aqui é o “para de digitar”
+const AUTO_IDLE_MS = 1300;
 const MIN_CHARS_TO_VALIDATE = 10;
-
-function ptCategoryFromMatch(m) {
-  const issue = String(m?.rule?.issueType || "").toLowerCase();
-  const cat = String(m?.rule?.category?.id || m?.rule?.category?.name || "").toLowerCase();
-
-  // categorização em PT (bem util)
-  if (issue.includes("misspelling")) return "Ortografia (spelling)";
-  if (issue.includes("typographical")) return "Digitação";
-  if (issue.includes("grammar")) return "Gramática";
-  if (issue.includes("style")) return "Estilo";
-  if (cat.includes("punct")) return "Pontuação";
-  if (cat.includes("typo")) return "Digitação/Ortografia";
-  return "Ajustes gerais";
-}
-
-function summarizeMatchesPt(matches) {
-  const counter = new Map();
-  for (const m of matches) {
-    const c = ptCategoryFromMatch(m);
-    counter.set(c, (counter.get(c) || 0) + 1);
-  }
-  const sorted = [...counter.entries()].sort((a,b) => b[1]-a[1]);
-  return sorted;
-}
 
 function renderCelebrate() {
   validationResult.innerHTML = `
@@ -429,21 +399,20 @@ function renderCelebrate() {
   `;
 }
 
-function renderTryAgain(matches) {
-  const summary = summarizeMatchesPt(matches).slice(0, 3);
+function renderTryAgainPt(matches) {
+  const summary = matches.slice(0, 3).map((m) => `${m.ptCategory || "Ajustes"}`).join(" • ");
 
   validationResult.innerHTML = `
     <div class="rounded-2xl bg-rose-500/10 p-4 text-sm text-rose-200 ring-1 ring-rose-400/30">
       😅 Quase! Tenta de novo — encontrei ${matches.length} ajuste(s).
-      ${summary.length ? `<div class="mt-2 text-xs text-rose-100/90">Mais apareceu: ${summary.map(([c,n]) => `${c} (${n})`).join(" • ")}</div>` : ""}
+      ${summary ? `<div class="mt-2 text-xs text-rose-100/90">Categorias: ${escapeHtml(summary)}</div>` : ""}
     </div>
   `;
 
-  // Mantém os cards (mensagens podem vir em EN do LT, mas o topo está em PT + categoria)
   const cards = matches.slice(0, 8).map((m) => {
-    const cat = escapeHtml(ptCategoryFromMatch(m));
-    const msg = escapeHtml(m.message || "Sugestão");
-    const repl = (m.replacements || []).slice(0, 5).map((r) => escapeHtml(r.value)).join(", ");
+    const cat = escapeHtml(m.ptCategory || "Ajustes gerais");
+    const msg = escapeHtml(m.ptMessage || "Sugestão");
+    const repl = Array.isArray(m.replacements) ? m.replacements.slice(0, 6).map(escapeHtml).join(", ") : "";
     return `
       <div class="rounded-2xl bg-slate-950/50 p-4 ring-1 ring-white/10">
         <p class="text-xs text-slate-400">${cat}</p>
@@ -457,62 +426,57 @@ function renderTryAgain(matches) {
 }
 
 function recordRoundStat({ word, sentence, ok, matches }) {
-  const byCategory = summarizeMatchesPt(matches || []);
-  roundStats.items.push({ word, sentence, ok, matchesCount: (matches || []).length, byCategory });
+  roundStats.items.push({
+    word,
+    sentence,
+    ok,
+    matchesCount: (matches || []).length,
+    categories: (matches || []).map((m) => m.ptCategory || "Ajustes gerais"),
+  });
 }
 
 async function validateSentence(text, { record = true } = {}) {
   const cleaned = (text || "").trim();
   if (!cleaned) return;
+  if (!currentItem?.word) return;
 
-  // evita validar sem palavra atual
-  if (!currentItem?.word) {
-    setStatus("Comece uma rodada para validar.", "error");
-    return;
-  }
-
-  // cancela anterior
   if (validateAbort) validateAbort.abort();
   validateAbort = new AbortController();
 
+  const validateUrl = getValidateUrlFromAsk(API_URL);
+
   setStatus("Validando…", "info");
 
-  const body = new URLSearchParams();
-  body.set("text", cleaned);
-  body.set("language", "en-US");
-  // dá uma ajudinha pra PT (não traduz tudo, mas melhora sugestões pra quem é PT)
-  body.set("motherTongue", "pt");
-
   try {
-    const res = await fetch(LANGUAGETOOL_URL, {
+    const res = await fetch(validateUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: body.toString(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: cleaned }),
       signal: validateAbort.signal,
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    const matches = data?.matches || [];
 
-    if (!matches.length) {
+    const data = await res.json();
+    const ok = !!data.ok;
+    const matches = Array.isArray(data.matches) ? data.matches : [];
+
+    if (ok) {
       setStatus("Correto ✅", "success");
       setTimeout(clearStatus, 800);
       renderCelebrate();
       if (record) recordRoundStat({ word: currentItem.word, sentence: cleaned, ok: true, matches: [] });
-      return { ok: true, matches: [] };
+      return;
     }
 
     setStatus("Tem ajustes…", "error");
     setTimeout(clearStatus, 900);
-    renderTryAgain(matches);
+    renderTryAgainPt(matches);
     if (record) recordRoundStat({ word: currentItem.word, sentence: cleaned, ok: false, matches });
-    return { ok: false, matches };
   } catch (err) {
-    if (err?.name === "AbortError") return null;
+    if (err?.name === "AbortError") return;
     console.error(err);
-    setStatus("Erro ao validar frase.", "error");
-    return null;
+    setStatus("Erro ao validar. Verifique o backend /validate.", "error");
   }
 }
 
@@ -522,97 +486,72 @@ function scheduleAutoValidate() {
   clearTimeout(validateDebounce);
   validateDebounce = setTimeout(() => {
     const value = (sentenceInput.value || "").trim();
-    if (value.length >= MIN_CHARS_TO_VALIDATE) {
-      validateSentence(value);
-    }
+    if (value.length >= MIN_CHARS_TO_VALIDATE) validateSentence(value);
   }, AUTO_IDLE_MS);
 }
 
-// ---------- End of round report (PT) ----------
-function makeRoundAdvicePt() {
-  if (!roundStats.items.length) {
-    return {
-      title: "Rodada finalizada",
-      body: "Você terminou a rodada, mas não encontrei validações registradas. Valide pelo menos uma frase por palavra 🙂",
-    };
-  }
-
-  const total = roundStats.items.length;
-  const okCount = roundStats.items.filter((x) => x.ok).length;
-
-  // soma categorias
-  const catSum = new Map();
-  for (const it of roundStats.items) {
-    for (const [cat, n] of it.byCategory) {
-      catSum.set(cat, (catSum.get(cat) || 0) + n);
-    }
-  }
-  const topCats = [...catSum.entries()].sort((a,b) => b[1]-a[1]).slice(0, 4);
-
-  // recomendações em PT (simples e úteis)
-  const tips = [];
-  for (const [cat] of topCats) {
-    if (cat.includes("Ortografia")) tips.push("Revise ortografia: palavras digitadas errado costumam ser os erros mais fáceis de eliminar.");
-    else if (cat.includes("Pontuação")) tips.push("Pontuação: confira ponto final, vírgulas e uso de maiúsculas no começo da frase.");
-    else if (cat.includes("Gramática")) tips.push("Gramática: preste atenção em artigos (a/an/the), ordem das palavras e concordância do verbo.");
-    else if (cat.includes("Estilo")) tips.push("Estilo: tente frases mais naturais e diretas, evitando construções “engessadas”.");
-    else tips.push("Ajustes gerais: reescreva a frase de forma mais simples e compare com as sugestões.");
-  }
-
-  // se não tiver categorias, ainda dá dica
-  if (!tips.length) tips.push("Tente escrever frases completas (sujeito + verbo + complemento) e valide novamente.");
-
-  return {
-    title: `Relatório da rodada (${difficultyLabel(roundStats.difficulty)})`,
-    body: `Você validou ${total} frase(s). Acertos: ${okCount}/${total}.`,
-    topCats,
-    tips,
-  };
-}
-
+// -------- End of round report (PT) --------
 function endRoundReport() {
   enableGameButtons(false);
   btnNewRound.classList.remove("hidden");
 
-  const advice = makeRoundAdvicePt();
+  const total = roundStats.items.length;
+  const okCount = roundStats.items.filter((x) => x.ok).length;
 
-  const catsHtml =
-    advice.topCats && advice.topCats.length
-      ? `<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-           <p class="text-sm font-semibold">O que mais apareceu</p>
-           <p class="mt-1 text-sm text-slate-300">${advice.topCats.map(([c,n]) => `${escapeHtml(c)} (${n})`).join(" • ")}</p>
-         </div>`
-      : "";
+  // conta categorias
+  const counter = new Map();
+  for (const it of roundStats.items) {
+    if (it.ok) continue;
+    for (const c of it.categories) counter.set(c, (counter.get(c) || 0) + 1);
+  }
+  const topCats = [...counter.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
 
-  const tipsHtml =
-    advice.tips && advice.tips.length
-      ? `<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-           <p class="text-sm font-semibold">Sugestões do que melhorar (PT)</p>
-           <ul class="mt-2 grid gap-2">
-             ${advice.tips.slice(0, 6).map(t => `<li class="rounded-2xl bg-slate-950/50 p-3 text-sm ring-1 ring-white/10">${escapeHtml(t)}</li>`).join("")}
-           </ul>
-         </div>`
-      : "";
+  const tips = [];
+  for (const [cat] of topCats) {
+    if (cat.includes("Ortografia")) tips.push("Revise ortografia: confira palavras digitadas errado e tente reescrever com calma.");
+    else if (cat.includes("Pontuação")) tips.push("Pontuação: revise ponto final, vírgulas e letra maiúscula no começo da frase.");
+    else if (cat.includes("Gramática")) tips.push("Gramática: atenção a artigos (a/an/the) e concordância do verbo.");
+    else if (cat.includes("Estilo")) tips.push("Estilo: tente frases mais naturais e diretas, evitando traduções literais.");
+    else tips.push("Ajustes gerais: simplifique a frase e compare com as sugestões.");
+  }
+  if (!tips.length) tips.push("Continue praticando: tente frases completas e claras, e valide novamente.");
+
+  const catsHtml = topCats.length
+    ? `<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+         <p class="text-sm font-semibold">O que mais apareceu</p>
+         <p class="mt-1 text-sm text-slate-300">${topCats.map(([c,n]) => `${escapeHtml(c)} (${n})`).join(" • ")}</p>
+       </div>`
+    : "";
+
+  const tipsHtml = tips.length
+    ? `<div class="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+         <p class="text-sm font-semibold">Sugestões do que melhorar (PT)</p>
+         <ul class="mt-2 grid gap-2">
+           ${tips.slice(0, 6).map(t => `<li class="rounded-2xl bg-slate-950/50 p-3 text-sm ring-1 ring-white/10">${escapeHtml(t)}</li>`).join("")}
+         </ul>
+       </div>`
+    : "";
 
   validationResult.innerHTML = `
     <div class="rounded-2xl bg-emerald-500/10 p-4 text-sm text-emerald-200 ring-1 ring-emerald-400/30">
-      ✅ Rodada concluída! ${escapeHtml(advice.body || "")}
+      ✅ Rodada concluída! Acertos: ${okCount}/${total}.
     </div>
     ${catsHtml}
     ${tipsHtml}
     <div class="rounded-2xl bg-slate-950/50 p-4 text-sm text-slate-200 ring-1 ring-white/10">
-      Quer subir o nível? Troque a dificuldade e clique em <b>Nova rodada</b> 🚀
+      Troque o nível e clique em <b>Nova rodada</b> para continuar 🚀
     </div>
   `;
 
   currentHintEl.textContent = "Rodada finalizada. Veja o relatório e inicie uma nova rodada.";
 }
 
-// ---------- Settings modal ----------
+// -------- Settings modal --------
 function openSettings() {
   apiUrlInput.value = API_URL;
   endpointLink.href = API_URL;
   if (configJson) configJson.value = JSON.stringify(CONFIG, null, 2);
+
   settingsModal.classList.remove("hidden");
   settingsModal.classList.add("flex");
 }
@@ -628,9 +567,8 @@ settingsModal.addEventListener("click", (e) => {
 });
 
 btnResetApi.addEventListener("click", () => {
-  CONFIG = { bffApiUrl: DEFAULT_API_URL, languageToolUrl: "https://api.languagetool.org/v2/check" };
+  CONFIG = { bffApiUrl: DEFAULT_API_URL };
   API_URL = CONFIG.bffApiUrl;
-  LANGUAGETOOL_URL = CONFIG.languageToolUrl;
 
   apiUrlInput.value = API_URL;
   endpointLink.href = API_URL;
@@ -645,28 +583,22 @@ btnSaveApi.addEventListener("click", () => {
     try {
       const parsed = JSON.parse(jsonVal);
       const bffApiUrl = String(parsed?.bffApiUrl || "").trim();
-      const languageToolUrl = String(parsed?.languageToolUrl || "").trim();
 
       if (!bffApiUrl.startsWith("http")) {
         setStatus("JSON inválido: bffApiUrl precisa começar com http:// ou https://", "error");
         return;
       }
-      if (languageToolUrl && !languageToolUrl.startsWith("http")) {
-        setStatus("JSON inválido: languageToolUrl precisa começar com http:// ou https://", "error");
-        return;
-      }
 
-      CONFIG = { bffApiUrl, languageToolUrl: languageToolUrl || "https://api.languagetool.org/v2/check" };
+      CONFIG = { bffApiUrl };
       saveConfig(CONFIG);
 
       API_URL = CONFIG.bffApiUrl;
-      LANGUAGETOOL_URL = CONFIG.languageToolUrl;
-
       endpointLink.href = API_URL;
 
       closeSettings();
       setStatus("Configurações salvas ✅", "success");
       setTimeout(clearStatus, 900);
+
       resetAll();
       return;
     } catch {
@@ -681,18 +613,20 @@ btnSaveApi.addEventListener("click", () => {
     return;
   }
 
-  CONFIG = { bffApiUrl: val, languageToolUrl: LANGUAGETOOL_URL };
+  CONFIG = { bffApiUrl: val };
   saveConfig(CONFIG);
+
   API_URL = val;
   endpointLink.href = API_URL;
 
   closeSettings();
   setStatus("Endpoint atualizado ✅", "success");
   setTimeout(clearStatus, 900);
+
   resetAll();
 });
 
-// ---------- Buttons & Events ----------
+// -------- Buttons & Events --------
 btnStartGame.addEventListener("click", startRound);
 btnNextWord.addEventListener("click", nextWord);
 btnClear.addEventListener("click", resetAll);
@@ -716,10 +650,9 @@ btnCopySentence.addEventListener("click", async () => {
   }
 });
 
-// Auto validate: só quando parar de digitar (idle)
 autoValidateToggle.addEventListener("change", () => {
   if (autoValidateToggle.checked) {
-    setStatus("Automático ligado ✅ (valida quando você parar de digitar)", "success");
+    setStatus("Automático ligado ✅ (valida quando você para de digitar)", "success");
     setTimeout(clearStatus, 900);
     scheduleAutoValidate();
   } else {
@@ -729,11 +662,9 @@ autoValidateToggle.addEventListener("change", () => {
 });
 
 sentenceInput.addEventListener("input", () => {
-  // PROFISSIONAL: só valida após o usuário parar (idle)
   if (autoValidateToggle.checked) scheduleAutoValidate();
 });
 
-// Extra: valida ao tirar o foco do campo (profissional também)
 sentenceInput.addEventListener("blur", () => {
   if (autoValidateToggle.checked) {
     const v = (sentenceInput.value || "").trim();
