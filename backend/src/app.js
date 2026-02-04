@@ -1,43 +1,29 @@
-require("dotenv").config();
-require("newrelic");
-
 const express = require("express");
-const rateLimit = require("express-rate-limit");
 const cors = require("cors");
-const validateRoute = require("./routes/validate");
 
 const askRoute = require("./routes/ask");
+const validateRoute = require("./routes/validate");
+
+const AppError = require("./utils/AppError");
+const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
 
-// Confia em proxy (Render/Netlify etc.)
-app.set("trust proxy", 1);
-
+app.use(cors());
 app.use(express.json());
 
-// CORS (se quiser travar depois, troque origin: "*")
-app.use(
-  cors({
-    origin: "*",
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"]
-  })
-);
-
-// Rate limit
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 60,
-    message: { error: "Muitas requisições. Tente novamente mais tarde." }
-  })
-);
-
-// Rotas
 app.use("/ask", askRoute);
 app.use("/validate", validateRoute);
 
-app.get("/health", (req, res) => res.status(200).json({ status: "ok" }));
+// ✅ 404 padronizado
+app.use((req, res, next) => {
+  next(new AppError("Rota não encontrada", 404));
+});
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`BFF rodando na porta ${PORT}`));
+// ✅ handler global de erros (sempre por último)
+app.use(errorHandler);
+
+const port = process.env.PORT || 3001;
+app.listen(port, () => console.log(`Backend rodando na porta ${port}`));
+
+module.exports = app;
