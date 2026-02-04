@@ -1,12 +1,23 @@
 const AppError = require("../utils/AppError");
 
 async function askOpenAI({ level, count, seed }) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const provider = process.env.AI_PROVIDER || "openai";
+  const model = process.env.AI_MODEL || "gpt-4o-mini";
+  const baseUrl =
+    process.env.AI_BASE_URL ||
+    (provider === "groq"
+      ? "https://api.groq.com/openai/v1"
+      : "https://api.openai.com/v1");
+
+  const apiKey =
+    provider === "groq"
+      ? process.env.GROQ_API_KEY
+      : process.env.OPENAI_API_KEY;
+
   if (!apiKey) {
     throw new AppError(
-      "OPENAI_API_KEY não configurada no backend.",
-      500,
-      ["Configure a variável OPENAI_API_KEY no Render/Local."]
+      `API key não configurada para provider "${provider}".`,
+      500
     );
   }
 
@@ -14,30 +25,28 @@ async function askOpenAI({ level, count, seed }) {
 Gere um ARRAY JSON com ${count} palavras em inglês no nível "${level}".
 Seed: ${seed}
 
-Cada item DEVE ter EXATAMENTE estes campos (nomes iguais):
+Cada item DEVE ter:
 {
   "word": "string",
   "type": "noun|verb|adjective|adverb",
-  "description": "definição curta em português (1 linha)",
-  "useCaseEn": "frase em inglês natural usando a palavra"
+  "description": "definição curta em português",
+  "useCaseEn": "frase natural em inglês usando a palavra"
 }
 
-Regras:
-- Não repita palavras.
-- Retorne SOMENTE o JSON do array, sem markdown, sem texto extra.
+Retorne SOMENTE o JSON do array.
 `;
 
   const body = {
-    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    model,
     messages: [
-      { role: "system", content: "Retorne apenas JSON válido (array). Sem texto adicional." },
+      { role: "system", content: "Retorne apenas JSON válido." },
       { role: "user", content: prompt },
     ],
     temperature: 0.9,
   };
 
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,46 +56,32 @@ Regras:
     });
 
     const raw = await res.text();
-
     let data;
+
     try {
       data = JSON.parse(raw);
-    } catch (_) {
-      throw new AppError("OpenAI retornou resposta inválida (não JSON).", 502, [raw.slice(0, 300)]);
+    } catch {
+      throw new AppError("Resposta inválida do provedor.", 502);
     }
 
     if (!res.ok) {
-      const msg = data?.error?.message || `Erro OpenAI HTTP ${res.status}`;
-      throw new AppError("Falha ao consultar a OpenAI.", 502, [msg]);
+      const msg = data?.error?.message || `Erro HTTP ${res.status}`;
+      throw new AppError(`Falha ao consultar ${provider}: ${msg}`, 502);
     }
 
     const content = data?.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new AppError("OpenAI não retornou conteúdo.", 502, [JSON.stringify(data).slice(0, 300)]);
-    }
 
     let parsed;
     try {
       parsed = JSON.parse(content);
-    } catch (_) {
-      throw new AppError("A OpenAI retornou conteúdo que não é JSON válido.", 502, [content.slice(0, 300)]);
+    } catch {
+      throw new AppError("O provider não retornou JSON válido.", 502);
     }
 
-    if (!Array.isArray(parsed)) {
-      throw new AppError("Formato inválido: esperado array JSON.", 502, [JSON.stringify(parsed).slice(0, 200)]);
-    }
-
-    const normalized = parsed.map((it) => ({
-      word: it.word,
-      type: it.type,
-      description: it.description,
-      useCaseEn: it.useCaseEn,
-    }));
-
-    return { data: normalized };
+    return { data: parsed };
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw new AppError("Erro de rede ao chamar OpenAI.", 502, [String(err?.message || err)]);
+    throw new AppError(`Erro ao chamar ${provider}.`, 502);
   }
 }
 
