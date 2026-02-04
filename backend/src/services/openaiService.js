@@ -1,138 +1,93 @@
-const axios = require("axios");
+const AppError = require("../utils/AppError");
 
-function getConfig() {
-  const provider = (process.env.AI_PROVIDER || "groq").toLowerCase();
-
-  const baseURL =
-    process.env.AI_BASE_URL ||
-    (provider === "openai" ? "https://api.openai.com/v1" : "https://api.groq.com/openai/v1");
-
-  const apiKey = provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
-
-  const model =
-    process.env.AI_MODEL || (provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant");
-
+async function askOpenAI({ level, count, seed }) {
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error(provider === "openai" ? "OPENAI_API_KEY não configurada" : "GROQ_API_KEY não configurada");
+    throw new AppError(
+      "OPENAI_API_KEY não configurada no backend.",
+      500,
+      ["Configure a variável OPENAI_API_KEY no Render/Local."]
+    );
   }
 
-  return { provider, baseURL, apiKey, model };
-}
-
-function extractJSONArray(text) {
-  const s = String(text || "").trim();
-
-  // tenta JSON puro
-  try {
-    const direct = JSON.parse(s);
-    if (Array.isArray(direct)) return direct;
-  } catch (_) {}
-
-  // tenta extrair o primeiro [ ... ]
-  const start = s.indexOf("[");
-  const end = s.lastIndexOf("]");
-  if (start !== -1 && end !== -1 && end > start) {
-    const slice = s.slice(start, end + 1);
-    const parsed = JSON.parse(slice);
-    if (Array.isArray(parsed)) return parsed;
-  }
-
-  throw new Error("Não foi possível extrair um JSON array válido da resposta da IA.");
-}
-
-function normalizeOutput(arr, count) {
-  if (!Array.isArray(arr)) throw new Error("Resposta não é array.");
-
-  const cleaned = arr
-    .map((x) => ({
-      word: String(x?.word || "").trim(),
-      type: String(x?.type || "").trim(),
-      description: String(x?.description || "").trim(), // PT
-      useCaseEn: String(x?.useCaseEn || "").trim(), // EN
-    }))
-    .filter((x) => x.word && x.description && x.useCaseEn);
-
-  // remove duplicadas por word (case-insensitive)
-  const uniq = [];
-  const seen = new Set();
-  for (const it of cleaned) {
-    const k = it.word.toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k);
-    uniq.push(it);
-  }
-
-  if (uniq.length < 5) throw new Error("Resposta da IA veio incompleta (poucos itens válidos).");
-
-  return uniq.slice(0, count);
-}
-
-function levelPrompt(level) {
-  const map = {
-    easy: "fácil (A1–A2)",
-    medium: "intermediário (B1–B2)",
-    hard: "avançado (C1)",
-    veryhard: "muito avançado (C2 / vocabulário raro)",
-  };
-  return map[level] || map.medium;
-}
-
-async function askOpenAI({ level = "medium", count = 40, seed = "" } = {}) {
-  const { baseURL, apiKey, model } = getConfig();
-
-  const safeCount = Math.max(5, Math.min(Number(count) || 40, 80));
-  const levelText = levelPrompt(level);
-
-  // ✅ Seed entra no prompt para "forçar" variação (evita repetir respostas idênticas)
   const prompt = `
-SEED DE VARIAÇÃO: ${String(seed).slice(0, 64)}
+Gere um ARRAY JSON com ${count} palavras em inglês no nível "${level}".
+Seed: ${seed}
 
-Gere ${safeCount} palavras em inglês no nível ${levelText}.
-Regras IMPORTANTES:
-- Evite repetir palavras comuns demais (ex.: very, good, bad, big, small).
-- Não repita palavras dentro do próprio resultado.
-- A cada chamada, traga palavras diferentes (use a SEED para variar).
+Cada item DEVE ter EXATAMENTE estes campos (nomes iguais):
+{
+  "word": "string",
+  "type": "noun|verb|adjective|adverb",
+  "description": "definição curta em português (1 linha)",
+  "useCaseEn": "frase em inglês natural usando a palavra"
+}
 
-Retorne APENAS um JSON válido (sem markdown, sem texto extra) no formato:
+Regras:
+- Não repita palavras.
+- Retorne SOMENTE o JSON do array, sem markdown, sem texto extra.
+`;
 
-[
-  {"word":"...","type":"verb|noun|adjective|adverb|phrasal verb","description":"(PT) ...","useCaseEn":"(EN) ..."},
-  ...
-]
+  const body = {
+    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+    messages: [
+      { role: "system", content: "Retorne apenas JSON válido (array). Sem texto adicional." },
+      { role: "user", content: prompt },
+    ],
+    temperature: 0.9,
+  };
 
-Regras de campos:
-- word: apenas a palavra (sem frase)
-- type: classe gramatical (verb/noun/adjective/adverb/phrasal verb)
-- description: significado/explicação curta em português (1-2 frases)
-- useCaseEn: uma frase em inglês usando a palavra (1 frase)
-`.trim();
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
 
-  const response = await axios.post(
-    `${baseURL}/chat/completions`,
-    {
-      model,
-      temperature: 0.85, // um pouco mais alto para variar
-      messages: [
-        {
-          role: "system",
-          content: "Você é um assistente de ensino de inglês. Responda somente com o JSON solicitado.",
-        },
-        { role: "user", content: prompt },
-      ],
-    },
-    {
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      timeout: 20000,
+    const raw = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (_) {
+      throw new AppError("OpenAI retornou resposta inválida (não JSON).", 502, [raw.slice(0, 300)]);
     }
-  );
 
-  const text = response?.data?.choices?.[0]?.message?.content;
-  if (!text) throw new Error("Resposta vazia do provedor de IA.");
+    if (!res.ok) {
+      const msg = data?.error?.message || `Erro OpenAI HTTP ${res.status}`;
+      throw new AppError("Falha ao consultar a OpenAI.", 502, [msg]);
+    }
 
-  const extracted = extractJSONArray(text);
-  const data = normalizeOutput(extracted, safeCount);
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new AppError("OpenAI não retornou conteúdo.", 502, [JSON.stringify(data).slice(0, 300)]);
+    }
 
-  return { data, timestamp: new Date().toISOString() };
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (_) {
+      throw new AppError("A OpenAI retornou conteúdo que não é JSON válido.", 502, [content.slice(0, 300)]);
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new AppError("Formato inválido: esperado array JSON.", 502, [JSON.stringify(parsed).slice(0, 200)]);
+    }
+
+    const normalized = parsed.map((it) => ({
+      word: it.word,
+      type: it.type,
+      description: it.description,
+      useCaseEn: it.useCaseEn,
+    }));
+
+    return { data: normalized };
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError("Erro de rede ao chamar OpenAI.", 502, [String(err?.message || err)]);
+  }
 }
 
 module.exports = { askOpenAI };

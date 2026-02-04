@@ -1,10 +1,8 @@
 const { askOpenAI } = require("../services/openaiService");
-const AppError = require("../utils/AppError");
-const asyncHandler = require("../middlewares/asyncHandler");
 
-// Cache por key
 const cacheByKey = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
+const SCHEMA_VERSION = "details_v1"; // <- muda isso quando mudar o formato
 
 function daySeed() {
   const d = new Date();
@@ -14,37 +12,55 @@ function daySeed() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-const getAsk = asyncHandler(async (req, res) => {
-  const level = String(req.query.level || "medium").toLowerCase();
-  const count = Math.max(5, Math.min(Number(req.query.count) || 40, 80));
+function isCompleteItem(it) {
+  return (
+    it &&
+    it.word &&
+    it.type &&
+    typeof it.pt_definition === "string" &&
+    typeof it.pt_use_case === "string" &&
+    typeof it.en_example === "string"
+  );
+}
 
-  // anti repetição:
-  const SHOULD_CACHE = count >= 40;
+async function getAsk(req, res, next) {
+  try {
+    const level = String(req.query.level || "medium").toLowerCase();
+    const count = Math.max(5, Math.min(Number(req.query.count) || 40, 80));
 
-  const incomingSeed = req.query.seed ? String(req.query.seed) : "";
-  const seed = incomingSeed || (SHOULD_CACHE ? daySeed() : String(Date.now()));
+    // cache só para pool grande
+    const SHOULD_CACHE = count >= 40;
 
-  const now = Date.now();
-  const key = `${level}:${count}:${seed}`;
+    const incomingSeed = req.query.seed ? String(req.query.seed) : "";
+    const seed = incomingSeed || (SHOULD_CACHE ? daySeed() : String(Date.now()));
 
-  if (SHOULD_CACHE) {
-    const cached = cacheByKey.get(key);
-    if (cached?.data && now - cached.ts < CACHE_TTL_MS) {
-      return res.json(cached.data);
+    const now = Date.now();
+
+    // ✅ inclui a versão para não reaproveitar cache antigo
+    const key = `${SCHEMA_VERSION}:${level}:${count}:${seed}`;
+
+    if (SHOULD_CACHE) {
+      const cached = cacheByKey.get(key);
+      if (cached?.data && now - cached.ts < CACHE_TTL_MS) {
+        return res.json(cached.data);
+      }
     }
+
+    const result = await askOpenAI({ level, count, seed });
+
+    const list = Array.isArray(result?.data) ? result.data : [];
+    const completeEnough = list.length > 0 && list.every(isCompleteItem);
+
+    // ✅ só cacheia se vier COMPLETO
+    if (SHOULD_CACHE && completeEnough) {
+      cacheByKey.set(key, { ts: now, data: list });
+    }
+
+    // se vier incompleto, devolve mesmo assim (pra você ver), mas sem cache
+    return res.json(list);
+  } catch (err) {
+    return next(err);
   }
-
-  const result = await askOpenAI({ level, count, seed });
-
-  if (!result?.data) {
-    throw new AppError("Resposta inválida do provedor de IA", 502);
-  }
-
-  if (SHOULD_CACHE) {
-    cacheByKey.set(key, { ts: now, data: result.data });
-  }
-
-  return res.json(result.data);
-});
+}
 
 module.exports = { getAsk };
