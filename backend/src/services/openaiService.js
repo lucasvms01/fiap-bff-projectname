@@ -9,7 +9,8 @@ function getConfig() {
 
   const apiKey = provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
 
-  const model = process.env.AI_MODEL || (provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant");
+  const model =
+    process.env.AI_MODEL || (provider === "openai" ? "gpt-4o-mini" : "llama-3.1-8b-instant");
 
   if (!apiKey) {
     throw new Error(provider === "openai" ? "OPENAI_API_KEY não configurada" : "GROQ_API_KEY não configurada");
@@ -76,14 +77,22 @@ function levelPrompt(level) {
   return map[level] || map.medium;
 }
 
-async function askOpenAI({ level = "medium", count = 40 } = {}) {
+async function askOpenAI({ level = "medium", count = 40, seed = "" } = {}) {
   const { baseURL, apiKey, model } = getConfig();
 
   const safeCount = Math.max(5, Math.min(Number(count) || 40, 80));
   const levelText = levelPrompt(level);
 
+  // ✅ Seed entra no prompt para "forçar" variação (evita repetir respostas idênticas)
   const prompt = `
+SEED DE VARIAÇÃO: ${String(seed).slice(0, 64)}
+
 Gere ${safeCount} palavras em inglês no nível ${levelText}.
+Regras IMPORTANTES:
+- Evite repetir palavras comuns demais (ex.: very, good, bad, big, small).
+- Não repita palavras dentro do próprio resultado.
+- A cada chamada, traga palavras diferentes (use a SEED para variar).
+
 Retorne APENAS um JSON válido (sem markdown, sem texto extra) no formato:
 
 [
@@ -91,7 +100,7 @@ Retorne APENAS um JSON válido (sem markdown, sem texto extra) no formato:
   ...
 ]
 
-Regras:
+Regras de campos:
 - word: apenas a palavra (sem frase)
 - type: classe gramatical (verb/noun/adjective/adverb/phrasal verb)
 - description: significado/explicação curta em português (1-2 frases)
@@ -102,9 +111,12 @@ Regras:
     `${baseURL}/chat/completions`,
     {
       model,
-      temperature: 0.7,
+      temperature: 0.85, // um pouco mais alto para variar
       messages: [
-        { role: "system", content: "Você é um assistente de ensino de inglês. Responda somente com o JSON solicitado." },
+        {
+          role: "system",
+          content: "Você é um assistente de ensino de inglês. Responda somente com o JSON solicitado.",
+        },
         { role: "user", content: prompt },
       ],
     },
