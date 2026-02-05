@@ -1,8 +1,4 @@
-/**
- * WordWise - Frontend (MANTÉM comportamento original + melhorias UX)
- * - NÃO altera o que existia: Detalhes completo, caso PT aleatório, exemplo EN, placeholder motivacional
- * - Melhora UX: loading, botões desabilitados, erro elegante, timeout
- */
+
 
 const DEFAULT_API_URL = "https://fiap-bff-v2.onrender.com/ask"; // usado só se não houver config salva
 
@@ -108,7 +104,7 @@ function shuffle(arr) {
 }
 
 function normalizeAskResponse(data) {
-  // backend pode devolver array puro ou {items: [...]}
+  
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.items)) return data.items;
   if (data && Array.isArray(data.data)) return data.data; // compat extra
@@ -181,7 +177,7 @@ function setBusy(busy, label = "Carregando…") {
   setButtonBusy(btnClearSentence, busy, "…");
 }
 
-// -------- API Fetch (erro elegante + timeout) --------
+// -------- API Fetch  --------
 class ApiError extends Error {
   constructor(message, status, details) {
     super(message);
@@ -274,7 +270,7 @@ function updateCounter() {
 }
 
 function enableGameButtons(isReady) {
-  // mantém a lógica original + melhora (validador e utilitários)
+
   if (btnNextWord) {
     btnNextWord.disabled = !isReady;
     btnNextWord.classList.toggle("opacity-50", !isReady);
@@ -478,7 +474,7 @@ function nextWord() {
   renderHistory();
   showCurrent(item);
 
-  // ✅ GARANTIA: campo SEMPRE vazio (nunca autopreenche)
+  
   if (sentenceInput) {
     sentenceInput.value = "";
     sentenceInput.placeholder = getMotivationalPlaceholder(item.word);
@@ -517,7 +513,7 @@ function resetAll() {
   clearStatus();
 }
 
-// -------- Validation (via backend /validate) --------
+// -------- Validation --------
 let validateDebounce = null;
 let validateAbort = null;
 

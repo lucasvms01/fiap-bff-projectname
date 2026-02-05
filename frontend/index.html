@@ -12,12 +12,85 @@
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Theme bootstrap: aplica tema antes de renderizar (evita "flash") -->
+    <style>
+      .scrollbar::-webkit-scrollbar { width: 10px; }
+      .scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.35); border-radius: 999px; }
+      .scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+      /* ===== MODO CLARO (quando HTML NÃO tiver .dark) ===== */
+      html:not(.dark) body {
+        background: linear-gradient(180deg, #dff1ff 0%, #ecf7ff 45%, #eaf2ff 100%) !important;
+        color: #0f172a !important;
+      }
+
+      html:not(.dark) header {
+        background: rgba(255,255,255,.88) !important;
+        border-color: rgba(15,23,42,.08) !important;
+      }
+
+      html:not(.dark) .ww-card {
+        background: #ffffff !important;
+        border-color: rgba(15,23,42,.10) !important;
+        box-shadow: 0 12px 26px rgba(15,23,42,.08) !important;
+      }
+
+      html:not(.dark) .ww-soft {
+        background: rgba(255,255,255,.92) !important;
+        border-color: rgba(15,23,42,.10) !important;
+      }
+
+      html:not(.dark) .ww-pill {
+        background: rgba(255,255,255,.92) !important;
+        border-color: rgba(15,23,42,.10) !important;
+        color: rgba(15,23,42,.78) !important;
+      }
+
+      /* Botões no claro*/
+      html:not(.dark) .ww-btn-secondary {
+        background: rgba(255,255,255,.96) !important;
+        border-color: rgba(15,23,42,.14) !important;
+        color: #0f172a !important;
+        box-shadow: 0 6px 14px rgba(15,23,42,.08) !important;
+      }
+      html:not(.dark) .ww-btn-secondary:hover {
+        background: #ffffff !important;
+        box-shadow: 0 10px 18px rgba(15,23,42,.10) !important;
+      }
+
+      html:not(.dark) .ww-input {
+        background: rgba(255,255,255,.98) !important;
+        border-color: rgba(15,23,42,.14) !important;
+        color: #0f172a !important;
+      }
+
+      html:not(.dark) .ww-muted { color: rgba(15,23,42,.70) !important; }
+      html:not(.dark) .ww-muted2 { color: rgba(15,23,42,.56) !important; }
+
+      /* Modal: card sólido + overlay mais forte*/
+      html:not(.dark) .ww-modal-card { background: #ffffff !important; }
+      html:not(.dark) .ww-modal-overlay { background: rgba(2,6,23,.62) !important; }
+
+      /* Botão de Config (no claro) */
+      html:not(.dark) .ww-icon-btn {
+        background: rgba(255,255,255,.92) !important;
+        border-color: rgba(15,23,42,.14) !important;
+        color: rgba(15,23,42,.85) !important;
+        box-shadow: 0 8px 18px rgba(15,23,42,.10) !important;
+      }
+      html:not(.dark) .ww-icon-btn:hover {
+        background: #ffffff !important;
+        box-shadow: 0 12px 22px rgba(15,23,42,.12) !important;
+      }
+    </style>
+
+    <!-- Theme bootstrap (sem flash): default = system -->
     <script>
       (function () {
         const STORAGE_KEY = "WORDWISE_THEME"; // "light" | "dark" | "system"
         const saved = localStorage.getItem(STORAGE_KEY) || "system";
-        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const prefersDark =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
         const resolved = saved === "system" ? (prefersDark ? "dark" : "light") : saved;
 
         document.documentElement.classList.toggle("dark", resolved === "dark");
@@ -25,25 +98,16 @@
         document.documentElement.dataset.theme = saved;
       })();
     </script>
-
-    <style>
-      .scrollbar::-webkit-scrollbar { width: 10px; }
-      .scrollbar::-webkit-scrollbar-thumb { background: rgba(148,163,184,.35); border-radius: 999px; }
-      .scrollbar::-webkit-scrollbar-track { background: transparent; }
-    </style>
   </head>
 
-  <body class="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+  <body class="min-h-screen bg-slate-950 text-slate-100">
     <!-- Header -->
-    <header
-      class="border-b border-black/10 bg-gradient-to-r from-slate-50/85 via-slate-50/65 to-slate-50/85 backdrop-blur
-             dark:border-white/10 dark:from-slate-950/85 dark:via-slate-950/65 dark:to-slate-950/85"
-    >
+    <header class="border-b border-white/10 bg-slate-950/70 backdrop-blur">
       <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
         <div class="flex items-center gap-3">
           <div
-            class="grid h-11 w-11 place-items-center rounded-2xl ring-1 ring-black/10 bg-black/5
-                   dark:ring-white/10 dark:bg-white/5"
+            class="grid h-11 w-11 place-items-center rounded-2xl ring-1 ring-black/10 bg-white shadow-sm
+                   dark:ring-white/10 dark:bg-white/10"
           >
             <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
               <defs>
@@ -53,37 +117,26 @@
                   <stop offset="1" stop-color="#22c55e"/>
                 </linearGradient>
               </defs>
-              <path d="M16 14c0-4 3-7 7-7h22c4 0 7 3 7 7v30c0 4-3 7-7 7H30L19 60c-2 1-5 0-5-3V14z" fill="url(#g1)" opacity="0.9"/>
-              <path d="M23 20h18a2 2 0 0 1 0 4H23a2 2 0 0 1 0-4zm0 10h12a2 2 0 0 1 0 4H23a2 2 0 0 1 0-4z" fill="rgba(2,6,23,.85)"/>
-              <path d="M47 19l2.2 4.6 5 .7-3.7 3.6.9 5.1-4.4-2.3-4.4 2.3.9-5.1-3.7-3.6 5-.7L47 19z" fill="rgba(255,255,255,.95)"/>
+              <path d="M16 14c0-4 3-7 7-7h22c4 0 7 3 7 7v30c0 4-3 7-7 7H30L19 60c-2 1-5 0-5-3V14z" fill="url(#g1)" opacity="0.92"/>
+              <path d="M23 20h18a2 2 0 0 1 0 4H23a2 2 0 0 1 0-4zm0 10h12a2 2 0 0 1 0 4H23a2 2 0 0 1 0-4z" fill="rgba(2,6,23,.88)"/>
+              <path d="M47 19l2.2 4.6 5 .7-3.7 3.6.9 5.1-4.4-2.3-4.4 2.3.9-5.1-3.7-3.6 5-.7L47 19z" fill="rgba(255,255,255,.96)"/>
             </svg>
           </div>
 
           <div>
             <h1 class="text-lg font-semibold leading-tight">WordWise</h1>
-            <p class="text-sm text-slate-600 dark:text-slate-300">
+            <p class="text-sm ww-muted dark:text-slate-300">
               Aprenda jogando: uma palavra por vez, do jeito certo.
             </p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- Theme toggle (rápido) -->
-          <button
-            id="btnTheme"
-            class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
-                   dark:bg-white/5 dark:ring-white/10 dark:hover:bg-white/10"
-            title="Alternar tema"
-            aria-label="Alternar tema"
-          >
-            <span id="themeIcon">🌙</span>
-          </button>
-
           <button
             id="btnSettings"
-            class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
-                   dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10"
+            class="ww-icon-btn grid h-10 w-10 place-items-center rounded-2xl bg-white/5 ring-1 ring-white/10 hover:bg-white/10 transition text-[18px] leading-none"
             title="Configurações"
+            aria-label="Configurações"
           >
             ⚙️
           </button>
@@ -94,30 +147,24 @@
     <main class="mx-auto max-w-6xl px-4 py-8">
       <section class="grid gap-6 lg:grid-cols-3">
         <!-- Left -->
-        <div
-          class="rounded-3xl bg-black/5 p-5 ring-1 ring-black/10
-                 dark:bg-white/5 dark:ring-white/10 lg:col-span-1"
-        >
-          <!-- ✅ Ajuste do topo: título + frase, botões abaixo -->
+        <div class="ww-card rounded-3xl bg-white/5 p-5 ring-1 ring-white/10 shadow-sm lg:col-span-1">
           <div>
             <h2 class="text-base font-semibold">Game de palavras</h2>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-1 text-sm ww-muted dark:text-slate-300">
               Cinco palavras por rodada foque em <b>usar</b>, não só memorizar 😉
             </p>
 
-            <div class="mt-4 grid grid-cols-3 gap-2">
+            <div class="mt-4 grid min-w-0 grid-cols-3 gap-2">
               <button
                 id="btnStartGame"
-                class="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500
-                       dark:bg-sky-500 dark:hover:bg-sky-400"
+                class="min-w-0 truncate rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400 transition shadow-sm"
               >
                 Começar
               </button>
 
               <button
                 id="btnNextWord"
-                class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
-                       dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
+                class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 disabled:opacity-50 transition"
                 disabled
               >
                 Próxima
@@ -125,64 +172,47 @@
 
               <button
                 id="btnClear"
-                class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
-                       dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
+                class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
               >
                 Reset
               </button>
             </div>
           </div>
 
-          <!-- Dificuldade -->
           <div class="mt-5 grid gap-2">
-            <label class="text-xs text-slate-600 dark:text-slate-400" for="difficultySelect">Dificuldade</label>
+            <label class="text-xs ww-muted2 dark:text-slate-400" for="difficultySelect">Dificuldade</label>
             <select
               id="difficultySelect"
-              class="w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
-                     dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
+              class="ww-input w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
               <option value="easy">Fácil</option>
               <option value="medium" selected>Médio</option>
               <option value="hard">Difícil</option>
               <option value="veryhard">Muito difícil</option>
             </select>
-            <p class="text-xs text-slate-500 dark:text-slate-500">
+
+            <p class="text-xs ww-muted2 dark:text-slate-500">
               A dificuldade influencia quais palavras entram na rodada.
             </p>
           </div>
 
           <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span
-              id="gameCounter"
-              class="rounded-2xl bg-black/5 px-3 py-2 text-xs ring-1 ring-black/10
-                     dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
-            >
+            <span id="gameCounter" class="ww-pill rounded-2xl bg-white/5 px-3 py-2 text-xs ring-1 ring-white/10">
               0 / 5
             </span>
 
-            <span
-              id="statusBadge"
-              class="hidden rounded-2xl bg-black/5 px-3 py-2 text-xs ring-1 ring-black/10
-                     dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
-            >
+            <span id="statusBadge" class="ww-pill hidden rounded-2xl bg-white/5 px-3 py-2 text-xs ring-1 ring-white/10">
               ...
             </span>
           </div>
 
-          <div
-            class="mt-4 rounded-3xl bg-white p-5 ring-1 ring-black/10
-                   dark:bg-slate-900/40 dark:ring-white/10"
-          >
-            <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">Palavra atual</p>
+          <div class="mt-4 rounded-3xl bg-slate-900/40 p-5 ring-1 ring-white/10 ww-soft">
+            <p class="text-xs font-semibold ww-muted dark:text-slate-300">Palavra atual</p>
             <div class="mt-2 flex items-center justify-between gap-3">
               <h3 id="currentWord" class="text-2xl font-semibold tracking-tight">—</h3>
-              <span
-                id="currentType"
-                class="rounded-xl bg-black/5 px-3 py-2 text-xs ring-1 ring-black/10
-                       dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
-              >—</span>
+              <span id="currentType" class="ww-pill rounded-xl bg-white/5 px-3 py-2 text-xs ring-1 ring-white/10">—</span>
             </div>
-            <p id="currentHint" class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            <p id="currentHint" class="mt-2 text-sm ww-muted dark:text-slate-300">
               Clique em <b>Começar</b> para iniciar uma rodada de 5 palavras.
             </p>
           </div>
@@ -190,53 +220,45 @@
           <div class="mt-4">
             <div class="flex items-center justify-between">
               <p class="text-sm font-semibold">Já saiu</p>
-              <p class="text-xs text-slate-500 dark:text-slate-400">rodada atual</p>
+              <p class="text-xs ww-muted2 dark:text-slate-400">rodada atual</p>
             </div>
             <ul id="wordList" class="scrollbar mt-2 max-h-[360px] overflow-auto pr-1"></ul>
           </div>
         </div>
 
         <!-- Right -->
-        <div
-          class="rounded-3xl bg-black/5 p-5 ring-1 ring-black/10
-                 dark:bg-white/5 dark:ring-white/10 lg:col-span-2"
-        >
+        <div class="ww-card rounded-3xl bg-white/5 p-5 ring-1 ring-white/10 shadow-sm lg:col-span-2">
           <div>
             <h2 class="text-base font-semibold">Detalhes</h2>
-            <!-- ✅ Remove o "+" -->
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+            <p class="mt-1 text-sm ww-muted dark:text-slate-300">
               Descrição e exemplo em português, e o validador com modo automático inteligente.
             </p>
           </div>
 
           <div id="details" class="mt-5 grid gap-4">
-            <div class="rounded-2xl bg-white p-4 ring-1 ring-black/10 dark:bg-slate-900/40 dark:ring-white/10">
-              <p class="text-sm text-slate-600 dark:text-slate-300">Nenhuma palavra ainda. Comece o game 🙂</p>
+            <div class="ww-soft rounded-2xl bg-slate-900/40 p-4 ring-1 ring-white/10">
+              <p class="text-sm ww-muted dark:text-slate-300">Nenhuma palavra ainda. Comece o game 🙂</p>
             </div>
           </div>
 
-          <div class="mt-6 rounded-3xl bg-white p-5 ring-1 ring-black/10 dark:bg-slate-900/40 dark:ring-white/10">
+          <div class="mt-6 ww-soft rounded-3xl bg-slate-900/40 p-5 ring-1 ring-white/10">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 class="text-base font-semibold">Validador de frase</h3>
-                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                  Ele só valida quando você <b>para de digitar</b> (mais profissional).
+                <p class="mt-1 text-sm ww-muted dark:text-slate-300">
+                  Escreve sua melhor frase utilizando a palavra sorteada 😊
                 </p>
               </div>
 
               <div class="flex items-center gap-2">
-                <label
-                  class="inline-flex items-center gap-2 rounded-2xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10
-                         dark:bg-white/5 dark:ring-white/10"
-                >
-                  <input id="autoValidateToggle" type="checkbox" class="h-4 w-4 accent-sky-600 dark:accent-sky-400" />
+                <label class="ww-pill inline-flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10">
+                  <input id="autoValidateToggle" type="checkbox" class="h-4 w-4 accent-sky-400" />
                   Automático
                 </label>
 
                 <button
                   id="btnValidate"
-                  class="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-500
-                         dark:bg-sky-500 dark:hover:bg-sky-400"
+                  class="min-w-0 truncate rounded-2xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400 transition shadow-sm"
                 >
                   Validar
                 </button>
@@ -244,35 +266,31 @@
             </div>
 
             <div class="mt-4">
-              <label class="block text-xs text-slate-600 dark:text-slate-400" for="sentenceInput">Sua frase</label>
+              <label class="block text-xs ww-muted2 dark:text-slate-400" for="sentenceInput">Sua frase</label>
               <textarea
                 id="sentenceInput"
                 rows="3"
-                class="mt-1 w-full rounded-2xl bg-slate-50 px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
-                       dark:bg-slate-950/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
+                class="ww-input mt-1 w-full rounded-2xl bg-slate-950/60 px-4 py-3 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 placeholder="Ex: I want to pursue my goals."
               ></textarea>
 
               <div class="mt-3 flex flex-wrap gap-2">
                 <button
                   id="btnCopySentence"
-                  class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
-                         dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
+                  class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
                 >
                   Copiar
                 </button>
                 <button
                   id="btnClearSentence"
-                  class="rounded-2xl bg-black/5 px-4 py-2 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
-                         dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
+                  class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-2 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
                 >
                   Limpar
                 </button>
 
                 <button
                   id="btnNewRound"
-                  class="hidden rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500
-                         dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                  class="hidden min-w-0 truncate rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 transition shadow-sm"
                   title="Iniciar nova rodada de 5 palavras"
                 >
                   Nova rodada
@@ -287,66 +305,74 @@
     </main>
 
     <!-- Settings Modal -->
-    <div id="settingsModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4">
-      <div class="w-full max-w-xl rounded-3xl bg-white p-6 ring-1 ring-black/10 dark:bg-slate-950 dark:ring-white/10">
+    <div
+      id="settingsModal"
+      class="ww-modal-overlay fixed inset-0 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4"
+    >
+      <div class="ww-modal-card ww-card w-full max-w-xl rounded-3xl bg-slate-950 p-6 ring-1 ring-white/10">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h3 class="text-lg font-semibold">Configurações</h3>
-            <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">Endpoint do BFF e preferências visuais.</p>
+            <p class="mt-1 text-sm ww-muted dark:text-slate-300">Endpoint do BFF e preferências visuais.</p>
           </div>
           <button
             id="btnCloseSettings"
-            class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
-                   dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10"
+            class="ww-btn-secondary rounded-xl bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 hover:bg-white/10 transition"
           >
             ✕
           </button>
         </div>
 
-        <!-- ✅ Tema dentro das configurações -->
         <div class="mt-4 grid gap-2">
-          <label class="block text-xs text-slate-600 dark:text-slate-400" for="themeSelect">Tema</label>
-          <div class="flex gap-2">
-            <select
-              id="themeSelect"
-              class="w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
-                     dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
+          <p class="text-xs ww-muted2 dark:text-slate-400">Modos : Claro, Escuro, Padrão</p>
+
+          <div class="grid grid-cols-3 gap-2">
+            <button
+              id="themeBtnLight"
+              type="button"
+              class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
             >
-              <option value="system">Sistema</option>
-              <option value="light">Claro</option>
-              <option value="dark">Escuro</option>
-            </select>
+              Claro
+            </button>
 
             <button
-              id="btnApplyTheme"
-              class="shrink-0 rounded-2xl bg-black/5 px-4 py-3 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
-                     dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
-              title="Aplicar tema"
+              id="themeBtnDark"
+              type="button"
+              class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
             >
-              Aplicar
+              Escuro
+            </button>
+
+            <button
+              id="themeBtnSystem"
+              type="button"
+              class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
+            >
+              Padrão
             </button>
           </div>
-          <p class="text-xs text-slate-500 dark:text-slate-500">
-            “Sistema” acompanha o tema do seu dispositivo.
+
+          <p class="text-xs ww-muted2 dark:text-slate-500">
+            “Padrão” acompanha o tema do seu dispositivo.
           </p>
         </div>
 
         <div class="mt-4">
-          <label class="block text-xs text-slate-600 dark:text-slate-400" for="apiUrlInput">URL completa do endpoint</label>
+          <label class="block text-xs ww-muted2 dark:text-slate-400" for="apiUrlInput">URL completa do endpoint</label>
           <input
             id="apiUrlInput"
             type="text"
-            class="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
-                   dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
+            class="ww-input mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
             placeholder="https://seu-bff.onrender.com/ask"
           />
         </div>
 
-        <div class="mt-4 grid gap-3 rounded-2xl bg-black/5 p-4 ring-1 ring-black/10 dark:bg-white/5 dark:ring-white/10">
+        <!--Ações rápidas + Avançado/JSON-->
+        <div class="mt-4 grid gap-3 rounded-2xl bg-white/5 p-4 ring-1 ring-white/10 ww-soft">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p class="text-sm font-semibold">Ações rápidas</p>
-              <p class="text-xs text-slate-600 dark:text-slate-400">Ver endpoint e editar JSON.</p>
+              <p class="text-xs ww-muted2 dark:text-slate-400">Ver endpoint e editar JSON.</p>
             </div>
 
             <a
@@ -354,8 +380,7 @@
               href="#"
               target="_blank"
               rel="noreferrer"
-              class="rounded-xl bg-black/5 px-3 py-2 text-sm ring-1 ring-black/10 hover:bg-black/10
-                     dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10"
+              class="ww-btn-secondary rounded-xl bg-white/5 px-3 py-2 text-sm ring-1 ring-white/10 hover:bg-white/10 transition"
             >
               Ver endpoint
             </a>
@@ -364,20 +389,18 @@
           <details class="group">
             <summary class="cursor-pointer list-none text-sm">
               <span class="inline-flex items-center gap-2">
-                <span class="rounded-lg bg-black/5 px-2 py-1 text-xs ring-1 ring-black/10 dark:bg-white/5 dark:ring-white/10">
+                <span class="rounded-lg bg-white/5 px-2 py-1 text-xs ring-1 ring-white/10">
                   Avançado
                 </span>
-                Editar tudo (JSON)
               </span>
             </summary>
 
             <div class="mt-3">
-              <label class="block text-xs text-slate-600 dark:text-slate-400" for="configJson">Configuração</label>
+              <label class="block text-xs ww-muted2 dark:text-slate-400" for="configJson">Configuração</label>
               <textarea
                 id="configJson"
                 rows="6"
-                class="mt-1 w-full rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-black/10 focus:outline-none focus:ring-2 focus:ring-sky-500
-                       dark:bg-slate-900/60 dark:text-slate-100 dark:ring-white/10 dark:focus:ring-sky-500"
+                class="ww-input mt-1 w-full rounded-2xl bg-slate-900/60 px-4 py-3 text-sm ring-1 ring-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 spellcheck="false"
               ></textarea>
             </div>
@@ -387,15 +410,13 @@
         <div class="mt-5 flex justify-end gap-2">
           <button
             id="btnResetApi"
-            class="rounded-2xl bg-black/5 px-4 py-3 text-sm font-semibold ring-1 ring-black/10 hover:bg-black/10
-                   dark:bg-white/5 dark:text-slate-100 dark:ring-white/10 dark:hover:bg-white/10"
+            class="ww-btn-secondary min-w-0 truncate rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold ring-1 ring-white/10 hover:bg-white/10 transition"
           >
             Reset
           </button>
           <button
             id="btnSaveApi"
-            class="rounded-2xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-500
-                   dark:bg-sky-500 dark:hover:bg-sky-400"
+            class="min-w-0 truncate rounded-2xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-400 transition shadow-sm"
           >
             Salvar
           </button>
@@ -403,16 +424,15 @@
       </div>
     </div>
 
-    <!-- Theme runtime: alterna e respeita mudanças do sistema quando "system" -->
+    <!-- Theme runtime: 3 modos -->
     <script>
       (function () {
         const STORAGE_KEY = "WORDWISE_THEME"; // "light" | "dark" | "system"
-        const btn = document.getElementById("btnTheme");
-        const icon = document.getElementById("themeIcon");
         const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
-        const themeSelect = document.getElementById("themeSelect");
-        const btnApplyTheme = document.getElementById("btnApplyTheme");
+        const btnLight = document.getElementById("themeBtnLight");
+        const btnDark = document.getElementById("themeBtnDark");
+        const btnSystem = document.getElementById("themeBtnSystem");
 
         function getSaved() {
           return localStorage.getItem(STORAGE_KEY) || "system";
@@ -423,17 +443,26 @@
           return saved === "system" ? (prefersDark ? "dark" : "light") : saved;
         }
 
+        function paintButtons(saved) {
+          const items = [
+            { el: btnLight, key: "light" },
+            { el: btnDark, key: "dark" },
+            { el: btnSystem, key: "system" },
+          ];
+          for (const it of items) {
+            if (!it.el) continue;
+            const active = saved === it.key;
+            it.el.classList.toggle("ring-2", active);
+            it.el.classList.toggle("ring-sky-500", active);
+          }
+        }
+
         function applyTheme(saved) {
           const resolved = resolveTheme(saved);
           document.documentElement.classList.toggle("dark", resolved === "dark");
           document.documentElement.style.colorScheme = resolved;
           document.documentElement.dataset.theme = saved;
-
-          if (icon) icon.textContent = resolved === "dark" ? "🌙" : "☀️";
-          if (btn) btn.title = `Tema: ${saved === "system" ? "Sistema" : saved === "dark" ? "Escuro" : "Claro"} (clique para alternar)`;
-
-          // sincroniza select do modal
-          if (themeSelect) themeSelect.value = saved;
+          paintButtons(saved);
         }
 
         function setAndApply(saved) {
@@ -441,14 +470,6 @@
           applyTheme(saved);
         }
 
-        function toggleThemeQuick() {
-          const saved = getSaved();
-          const resolved = resolveTheme(saved);
-          const next = resolved === "dark" ? "light" : "dark"; // fixa escolha do usuário
-          setAndApply(next);
-        }
-
-        // se estiver em system, acompanha mudanças do SO
         if (media) {
           const handler = () => {
             const saved = getSaved();
@@ -457,18 +478,11 @@
           try { media.addEventListener("change", handler); } catch { media.addListener(handler); }
         }
 
-        // init
         applyTheme(getSaved());
 
-        if (btn) btn.addEventListener("click", toggleThemeQuick);
-
-        // aplicar tema pelo modal (sem conflitar com o app.js)
-        if (btnApplyTheme && themeSelect) {
-          btnApplyTheme.addEventListener("click", () => {
-            const v = themeSelect.value || "system";
-            setAndApply(v);
-          });
-        }
+        if (btnLight) btnLight.addEventListener("click", () => setAndApply("light"));
+        if (btnDark) btnDark.addEventListener("click", () => setAndApply("dark"));
+        if (btnSystem) btnSystem.addEventListener("click", () => setAndApply("system"));
       })();
     </script>
 
