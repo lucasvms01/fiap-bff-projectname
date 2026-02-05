@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const LT_URL = process.env.LANGUAGETOOL_URL || "https://api.languagetool.org/v2/check";
 
-// Traduções bem certeiras para mensagens comuns (inclui a da sua imagem)
+
 const MESSAGE_MAP = [
   {
     re: /Only proper nouns start with an uppercase character/i,
@@ -35,7 +35,7 @@ function toPtMessage(message) {
   for (const m of MESSAGE_MAP) {
     if (m.re.test(msg)) return m.pt;
   }
-  // fallback: mantém a original, mas “embrulha” num PT útil
+  
   return msg
     ? `Sugestão do corretor: ${msg}`
     : "Sugestão do corretor.";

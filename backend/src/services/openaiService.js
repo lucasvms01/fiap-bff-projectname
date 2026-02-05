@@ -3,20 +3,20 @@ const AppError = require("../utils/AppError");
 function extractJsonArray(text) {
   if (!text) return null;
 
-  // remove fences de markdown caso existam
+  
   const cleaned = String(text)
     .trim()
     .replace(/^```(json)?/i, "")
     .replace(/```$/i, "")
     .trim();
 
-  // 1) tenta parse direto (caso já seja JSON puro)
+  
   try {
     const direct = JSON.parse(cleaned);
     if (Array.isArray(direct)) return direct;
   } catch (_) {}
 
-  // 2) tenta extrair o primeiro array [ ... ] dentro do texto
+  
   const first = cleaned.indexOf("[");
   const last = cleaned.lastIndexOf("]");
   if (first >= 0 && last > first) {
@@ -43,7 +43,7 @@ async function askOpenAI({ level, count, seed }) {
     throw new AppError(`API key não configurada para provider "${provider}".`, 500);
   }
 
-  // ✅ Mantém o formato antigo do seu front (não muda)
+  
   const prompt = `
 Gere um ARRAY JSON com ${count} palavras em inglês no nível "${level}".
 Seed: ${seed}
